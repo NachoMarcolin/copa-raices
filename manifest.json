@@ -1,0 +1,17 @@
+{
+  "name": "Copa Raíces",
+  "short_name": "Copa Raíces",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f8fb",
+  "theme_color": "#0b2f63",
+  "description": "Resultados, fixture, posiciones y goleadores de Copa Raíces.",
+  "icons": [
+    {
+      "src": "assets/logo-raices.jpg",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

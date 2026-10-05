@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#ffffff"
+  >
+
+  <title>Administración | Copa Raíces</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="css/styles.css"
+  >
+</head>
+
+
+<body class="admin-page">
+
+
+  <!-- ========================================
+       LOGIN
+  ========================================= -->
+
+  <section
+    id="loginScreen"
+    class="admin-login-screen"
+  >
+
+    <div class="admin-login-card">
+
+      <div class="admin-login-brand">
+
+        <img
+          src="assets/logo-raices.jpeg"
+          alt="Copa Raíces"
+        >
+
+        <div>
+          <span>COPA</span>
+          <strong>RAÍCES</strong>
+        </div>
+
+      </div>
+
+
+      <div class="admin-login-heading">
+
+        <span class="admin-eyebrow">
+          ORGANIZACIÓN
+        </span>
+
+        <h1>
+          Panel de administración
+        </h1>
+
+        <p>
+          Ingresá con tu cuenta autorizada.
+        </p>
+
+      </div>
+
+
+      <form id="loginForm">
+
+        <div class="admin-field">
+
+          <label for="loginEmail">
+            Email
+          </label>
+
+          <input
+            id="loginEmail"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="admin@coparaices.com"
+          >
+
+        </div>
+
+
+        <div class="admin-field">
+
+          <label for="loginPassword">
+            Contraseña
+          </label>
+
+          <input
+            id="loginPassword"
+            type="password"
+            autocomplete="current-password"
+            required
+            placeholder="••••••••"
+          >
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="admin-primary-button admin-full-button"
+        >
+          Iniciar sesión
+        </button>
+
+
+        <p
+          id="loginMessage"
+          class="admin-form-message"
+        ></p>
+
+      </form>
+
+    </div>
+
+  </section>
+
+
+
+  <!-- ========================================
+       APP ADMIN
+  ========================================= -->
+
+  <div
+    id="adminApp"
+    class="admin-app hidden"
+  >
+
+
+    <!-- HEADER -->
+
+    <header class="admin-topbar">
+
+      <div class="admin-topbar-inner">
+
+        <a
+          href="index.html"
+          class="admin-brand"
+        >
+
+          <img
+            src="assets/logo-raices.jpg"
+            alt="Copa Raíces"
+          >
+
+          <div>
+            <span>COPA</span>
+            <strong>RAÍCES</strong>
+          </div>
+
+        </a>
+
+
+        <div class="admin-header-actions">
+
+          <a
+            href="index.html"
+            class="admin-public-link"
+          >
+            Ver web
+          </a>
+
+          <button
+            id="logoutButton"
+            class="admin-icon-button"
+            title="Cerrar sesión"
+          >
+            ↪
+          </button>
+
+        </div>
+
+      </div>
+
+    </header>
+
+
+
+    <!-- NAV -->
+
+    <nav class="admin-nav">
+
+      <button
+        class="admin-nav-button active"
+        data-admin-section="control"
+      >
+        Control
+      </button>
+
+      <button
+        class="admin-nav-button"
+        data-admin-section="matches"
+      >
+        Partidos
+      </button>
+
+      <button
+        class="admin-nav-button"
+        data-admin-section="teams"
+      >
+        Equipos
+      </button>
+
+    </nav>
+
+
+
+    <main class="admin-main">
+
+
+      <!-- ========================================
+           CONTROL EN VIVO
+      ========================================= -->
+
+      <section
+        id="admin-control"
+        class="admin-section active"
+      >
+
+
+        <div class="admin-section-title">
+
+          <span class="admin-eyebrow">
+            EN VIVO
+          </span>
+
+          <h1>
+            Control del partido
+          </h1>
+
+        </div>
+
+
+
+        <!-- SELECCIÓN -->
+
+        <div class="admin-card">
+
+          <div class="admin-two-columns">
+
+            <div class="admin-field">
+
+              <label for="controlSport">
+                Deporte
+              </label>
+
+              <select id="controlSport">
+
+                <option value="football">
+                  Fútbol
+                </option>
+
+                <option value="padel">
+                  Pádel
+                </option>
+
+              </select>
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="matchSelector">
+                Partido
+              </label>
+
+              <select id="matchSelector"></select>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- ESTADO -->
+
+        <div
+          id="controlPanel"
+          class="admin-control-panel"
+        >
+
+
+          <div class="admin-match-status-row">
+
+            <div>
+
+              <span
+                id="adminMatchCourt"
+                class="admin-small-text"
+              >
+                —
+              </span>
+
+            </div>
+
+            <span
+              id="adminMatchStatus"
+              class="admin-status-badge"
+            >
+              PENDIENTE
+            </span>
+
+          </div>
+
+
+
+          <!-- MARCADOR -->
+
+          <div class="admin-scoreboard">
+
+
+            <div class="admin-score-team">
+
+              <span class="admin-team-label">
+                LOCAL
+              </span>
+
+              <strong id="adminHomeName">
+                Equipo local
+              </strong>
+
+
+              <div class="admin-score-controls">
+
+                <button
+                  id="homeMinus"
+                  class="admin-score-button"
+                >
+                  −
+                </button>
+
+                <span
+                  id="adminHomeScore"
+                  class="admin-score-number"
+                >
+                  0
+                </span>
+
+                <button
+                  id="homePlus"
+                  class="admin-score-button primary"
+                >
+                  +
+                </button>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="admin-score-separator">
+              -
+            </div>
+
+
+
+            <div class="admin-score-team">
+
+              <span class="admin-team-label">
+                VISITANTE
+              </span>
+
+              <strong id="adminAwayName">
+                Equipo visitante
+              </strong>
+
+
+              <div class="admin-score-controls">
+
+                <button
+                  id="awayMinus"
+                  class="admin-score-button"
+                >
+                  −
+                </button>
+
+                <span
+                  id="adminAwayScore"
+                  class="admin-score-number"
+                >
+                  0
+                </span>
+
+                <button
+                  id="awayPlus"
+                  class="admin-score-button primary"
+                >
+                  +
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- RELOJ -->
+
+          <div class="admin-clock-area">
+
+            <span class="admin-team-label">
+              TIEMPO
+            </span>
+
+            <div
+              id="adminClock"
+              class="admin-clock"
+            >
+              00:00
+            </div>
+
+
+            <div class="admin-button-row">
+
+              <button
+                id="startClock"
+                class="admin-primary-button"
+              >
+                ▶ Iniciar
+              </button>
+
+              <button
+                id="pauseClock"
+                class="admin-secondary-button"
+              >
+                ⏸ Pausar
+              </button>
+
+              <button
+                id="resetClock"
+                class="admin-secondary-button danger"
+              >
+                Reiniciar
+              </button>
+
+            </div>
+
+          </div>
+
+
+
+          <!-- PERÍODO -->
+
+          <div class="admin-period-area">
+
+            <span class="admin-team-label">
+              PERÍODO
+            </span>
+
+            <div
+              id="periodButtons"
+              class="admin-period-buttons"
+            >
+            </div>
+
+          </div>
+
+
+
+          <!-- DATOS DEL PARTIDO -->
+
+          <div class="admin-edit-block">
+
+            <div class="admin-block-heading">
+
+              <h2>
+                Datos del partido
+              </h2>
+
+            </div>
+
+
+            <div class="admin-form-grid">
+
+
+              <div class="admin-field">
+
+                <label for="editHomeTeam">
+                  Local
+                </label>
+
+                <select id="editHomeTeam"></select>
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editAwayTeam">
+                  Visitante
+                </label>
+
+                <select id="editAwayTeam"></select>
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editCourt">
+                  Cancha
+                </label>
+
+                <input
+                  id="editCourt"
+                  type="text"
+                  placeholder="Cancha 1"
+                >
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editGroup">
+                  Grupo
+                </label>
+
+                <input
+                  id="editGroup"
+                  type="text"
+                  placeholder="Grupo A"
+                >
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editRound">
+                  Ronda
+                </label>
+
+                <input
+                  id="editRound"
+                  type="text"
+                  placeholder="Fase de grupos"
+                >
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editDate">
+                  Fecha
+                </label>
+
+                <input
+                  id="editDate"
+                  type="date"
+                >
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="editTime">
+                  Horario
+                </label>
+
+                <input
+                  id="editTime"
+                  type="time"
+                >
+
+              </div>
+
+            </div>
+
+
+            <button
+              id="saveMatchInfo"
+              class="admin-primary-button admin-full-button"
+            >
+              Guardar cambios
+            </button>
+
+          </div>
+
+
+
+          <!-- EVENTOS -->
+
+          <div class="admin-edit-block">
+
+            <div class="admin-block-heading">
+
+              <h2>
+                Agregar evento
+              </h2>
+
+            </div>
+
+
+            <div class="admin-form-grid">
+
+
+              <div class="admin-field">
+
+                <label for="eventTeam">
+                  Equipo
+                </label>
+
+                <select id="eventTeam"></select>
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="eventType">
+                  Tipo
+                </label>
+
+                <select id="eventType">
+
+                  <option value="goal">
+                    ⚽ Gol
+                  </option>
+
+                  <option value="yellow">
+                    🟨 Amarilla
+                  </option>
+
+                  <option value="red">
+                    🟥 Roja
+                  </option>
+
+                  <option value="point">
+                    🎾 Punto
+                  </option>
+
+                </select>
+
+              </div>
+
+
+              <div class="admin-field admin-full-field">
+
+                <label for="eventPlayer">
+                  Jugador
+                </label>
+
+                <input
+                  id="eventPlayer"
+                  type="text"
+                  placeholder="Nombre del jugador"
+                >
+
+              </div>
+
+
+              <div class="admin-field">
+
+                <label for="eventMinute">
+                  Minuto
+                </label>
+
+                <input
+                  id="eventMinute"
+                  type="number"
+                  min="0"
+                  value="0"
+                >
+
+              </div>
+
+            </div>
+
+
+            <button
+              id="addEventButton"
+              class="admin-primary-button admin-full-button"
+            >
+              Publicar evento
+            </button>
+
+
+            <div
+              id="adminEventsList"
+              class="admin-events-list"
+            >
+            </div>
+
+          </div>
+
+
+
+          <!-- ACCIONES -->
+
+          <div class="admin-danger-zone">
+
+            <button
+              id="finishMatchButton"
+              class="admin-finish-button"
+            >
+              Finalizar partido
+            </button>
+
+            <button
+              id="reopenMatchButton"
+              class="admin-secondary-button admin-full-button"
+            >
+              Reabrir partido
+            </button>
+
+          </div>
+
+
+        </div>
+
+      </section>
+
+
+
+      <!-- ========================================
+           PARTIDOS
+      ========================================= -->
+
+      <section
+        id="admin-matches"
+        class="admin-section"
+      >
+
+
+        <div class="admin-section-title">
+
+          <span class="admin-eyebrow">
+            FIXTURE
+          </span>
+
+          <h1>
+            Partidos
+          </h1>
+
+        </div>
+
+
+
+        <div class="admin-card">
+
+          <div class="admin-block-heading">
+
+            <h2>
+              Crear partido
+            </h2>
+
+          </div>
+
+
+          <div class="admin-form-grid">
+
+
+            <div class="admin-field">
+
+              <label for="newMatchSport">
+                Deporte
+              </label>
+
+              <select id="newMatchSport">
+
+                <option value="football">
+                  Fútbol
+                </option>
+
+                <option value="padel">
+                  Pádel
+                </option>
+
+              </select>
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchHome">
+                Local
+              </label>
+
+              <select id="newMatchHome"></select>
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchAway">
+                Visitante
+              </label>
+
+              <select id="newMatchAway"></select>
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchCourt">
+                Cancha
+              </label>
+
+              <input
+                id="newMatchCourt"
+                type="text"
+                placeholder="Cancha 1"
+              >
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchGroup">
+                Grupo
+              </label>
+
+              <input
+                id="newMatchGroup"
+                type="text"
+                placeholder="Grupo A"
+              >
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchRound">
+                Ronda
+              </label>
+
+              <input
+                id="newMatchRound"
+                type="text"
+                placeholder="Fase de grupos"
+              >
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchDate">
+                Fecha
+              </label>
+
+              <input
+                id="newMatchDate"
+                type="date"
+              >
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newMatchTime">
+                Horario
+              </label>
+
+              <input
+                id="newMatchTime"
+                type="time"
+              >
+
+            </div>
+
+          </div>
+
+
+          <button
+            id="createMatchButton"
+            class="admin-primary-button admin-full-button"
+          >
+            Crear partido
+          </button>
+
+        </div>
+
+
+
+        <div
+          id="matchesAdminList"
+          class="admin-list"
+        >
+        </div>
+
+
+      </section>
+
+
+
+      <!-- ========================================
+           EQUIPOS
+      ========================================= -->
+
+      <section
+        id="admin-teams"
+        class="admin-section"
+      >
+
+
+        <div class="admin-section-title">
+
+          <span class="admin-eyebrow">
+            PARTICIPANTES
+          </span>
+
+          <h1>
+            Equipos
+          </h1>
+
+        </div>
+
+
+
+        <div class="admin-card">
+
+          <div class="admin-block-heading">
+
+            <h2>
+              Agregar equipo
+            </h2>
+
+          </div>
+
+
+          <div class="admin-form-grid">
+
+
+            <div class="admin-field admin-full-field">
+
+              <label for="newTeamName">
+                Nombre
+              </label>
+
+              <input
+                id="newTeamName"
+                type="text"
+                placeholder="Nombre del equipo"
+              >
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newTeamSport">
+                Deporte
+              </label>
+
+              <select id="newTeamSport">
+
+                <option value="football">
+                  Fútbol
+                </option>
+
+                <option value="padel">
+                  Pádel
+                </option>
+
+              </select>
+
+            </div>
+
+
+            <div class="admin-field">
+
+              <label for="newTeamGroup">
+                Grupo
+              </label>
+
+              <input
+                id="newTeamGroup"
+                type="text"
+                placeholder="Grupo A"
+              >
+
+            </div>
+
+          </div>
+
+
+          <button
+            id="createTeamButton"
+            class="admin-primary-button admin-full-button"
+          >
+            Agregar equipo
+          </button>
+
+        </div>
+
+
+
+        <div
+          id="teamsAdminList"
+          class="admin-list"
+        >
+        </div>
+
+
+      </section>
+
+
+    </main>
+
+  </div>
+
+
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  ></script>
+
+  <script src="js/supabase-config.js"></script>
+  <script src="js/admin.js"></script>
+
+</body>
+
+</html>
