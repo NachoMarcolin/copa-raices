@@ -4661,3 +4661,337 @@ async function deleteTeam(
   await loadEverything();
 
 }
+
+// ======================================================
+// DATOS DEL PARTIDO PLEGABLE
+// ======================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    setupCollapsibleMatchData();
+
+  }
+);
+
+
+function setupCollapsibleMatchData() {
+
+  const saveButton =
+    document.getElementById(
+      "saveMatchInfo"
+    );
+
+
+  if (!saveButton) {
+    return;
+  }
+
+
+  const block =
+    saveButton.closest(
+      ".admin-edit-block"
+    );
+
+
+  if (!block) {
+    return;
+  }
+
+
+  // Evitar crear el desplegable dos veces
+
+  if (
+    block.classList.contains(
+      "match-data-collapsible"
+    )
+  ) {
+    return;
+  }
+
+
+  block.classList.add(
+    "match-data-collapsible"
+  );
+
+
+  const heading =
+    block.querySelector(
+      ".admin-block-heading"
+    );
+
+
+  if (!heading) {
+    return;
+  }
+
+
+  const title =
+    heading.querySelector(
+      "h2"
+    );
+
+
+  if (!title) {
+    return;
+  }
+
+
+  // Crear botón superior
+
+  const toggleButton =
+    document.createElement(
+      "button"
+    );
+
+
+  toggleButton.type =
+    "button";
+
+
+  toggleButton.className =
+    "match-data-toggle";
+
+
+  toggleButton.setAttribute(
+    "aria-expanded",
+    "true"
+  );
+
+
+  toggleButton.innerHTML = `
+
+    <span>
+      Datos del partido
+    </span>
+
+    <span
+      class="match-data-arrow"
+      aria-hidden="true"
+    >
+      ▼
+    </span>
+
+  `;
+
+
+  // Reemplazamos solamente el título visual
+
+  heading.innerHTML =
+    "";
+
+
+  heading.appendChild(
+    toggleButton
+  );
+
+
+  // Crear contenedor de lo que se abre/cierra
+
+  const content =
+    document.createElement(
+      "div"
+    );
+
+
+  content.className =
+    "match-data-content";
+
+
+  while (
+    heading.nextSibling
+  ) {
+
+    content.appendChild(
+      heading.nextSibling
+    );
+
+  }
+
+
+  block.appendChild(
+    content
+  );
+
+
+  // Abrir / cerrar
+
+  toggleButton.addEventListener(
+    "click",
+    () => {
+
+      const isClosed =
+        block.classList.toggle(
+          "match-data-closed"
+        );
+
+
+      toggleButton.setAttribute(
+        "aria-expanded",
+        String(
+          !isClosed
+        )
+      );
+
+
+      const arrow =
+        toggleButton.querySelector(
+          ".match-data-arrow"
+        );
+
+
+      if (arrow) {
+
+        arrow.textContent =
+          isClosed
+            ? "▶"
+            : "▼";
+
+      }
+
+    }
+  );
+
+
+  // CSS del desplegable
+  // Lo ponemos desde JS para que no tengas
+  // que modificar styles.css.
+
+  if (
+    !document.getElementById(
+      "matchDataCollapseStyles"
+    )
+  ) {
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+
+    style.id =
+      "matchDataCollapseStyles";
+
+
+    style.textContent = `
+
+      .match-data-collapsible {
+        padding-top: 0 !important;
+        margin-top: 24px;
+        border-top: 1px solid var(--border);
+      }
+
+
+      .match-data-collapsible
+      .admin-block-heading {
+        margin-bottom: 0;
+      }
+
+
+      .match-data-toggle {
+        width: 100%;
+        min-height: 58px;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        gap: 15px;
+
+        padding: 0;
+
+        border: 0;
+
+        background: transparent;
+
+        color: var(--navy);
+
+        font-size: 18px;
+        font-weight: 900;
+
+        text-align: left;
+
+        cursor: pointer;
+      }
+
+
+      .match-data-arrow {
+        width: 34px;
+        height: 34px;
+
+        display: grid;
+        place-items: center;
+
+        flex-shrink: 0;
+
+        border-radius: 50%;
+
+        background: #edf3f8;
+
+        color: var(--navy);
+
+        font-size: 12px;
+
+        transition:
+          background .2s ease,
+          transform .2s ease;
+      }
+
+
+      .match-data-toggle:hover
+      .match-data-arrow {
+        background: var(--blue-soft);
+      }
+
+
+      .match-data-content {
+        overflow: hidden;
+
+        max-height: 1000px;
+
+        opacity: 1;
+
+        transition:
+          max-height .3s ease,
+          opacity .2s ease,
+          padding .3s ease;
+      }
+
+
+      .match-data-closed
+      .match-data-content {
+        max-height: 0;
+
+        opacity: 0;
+
+        pointer-events: none;
+      }
+
+
+      @media (max-width: 540px) {
+
+        .match-data-toggle {
+          min-height: 55px;
+
+          font-size: 17px;
+        }
+
+
+        .match-data-arrow {
+          width: 32px;
+          height: 32px;
+        }
+
+      }
+
+    `;
+
+
+    document.head.appendChild(
+      style
+    );
+
+  }
+
+}
