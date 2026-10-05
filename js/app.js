@@ -7,264 +7,10 @@
 let currentSport = "football";
 
 let matches = [];
-
 let events = [];
 
-let teams = [];
-
-
-
-// ======================================================
-// DATOS DEMO
-// Se utilizan si Supabase todavía no tiene partidos.
-// ======================================================
-
-
-const demoTeams = [
-
-  {
-    id: 1,
-    name: "Sol de Mayo",
-    sport: "football"
-  },
-
-  {
-    id: 2,
-    name: "Barrio Norte",
-    sport: "football"
-  },
-
-  {
-    id: 3,
-    name: "Pampa FC",
-    sport: "football"
-  },
-
-  {
-    id: 4,
-    name: "Los Andes",
-    sport: "football"
-  },
-
-  {
-    id: 5,
-    name: "Central Argentino",
-    sport: "football"
-  },
-
-  {
-    id: 6,
-    name: "Unión del Sur",
-    sport: "football"
-  },
-
-  {
-    id: 7,
-    name: "Raíces FC",
-    sport: "football"
-  }
-
-];
-
-
-const demoMatches = [
-
-  {
-
-    id: 1,
-
-    sport: "football",
-
-    court: "Cancha 1",
-
-    group_name: "Grupo A",
-
-    status: "live",
-
-    period: "1T",
-
-    elapsed_seconds: 1020,
-
-    home_score: 2,
-
-    away_score: 1,
-
-    home_team: demoTeams[0],
-
-    away_team: demoTeams[1],
-
-    start_time: "14:00"
-
-  },
-
-
-  {
-
-    id: 2,
-
-    sport: "football",
-
-    court: "Cancha 2",
-
-    group_name: "Grupo B",
-
-    status: "live",
-
-    period: "2T",
-
-    elapsed_seconds: 1680,
-
-    home_score: 1,
-
-    away_score: 0,
-
-    home_team: demoTeams[2],
-
-    away_team: demoTeams[3],
-
-    start_time: "14:00"
-
-  },
-
-
-  {
-
-    id: 3,
-
-    sport: "football",
-
-    court: "Cancha 3",
-
-    group_name: "Grupo A",
-
-    status: "pending",
-
-    home_score: 0,
-
-    away_score: 0,
-
-    home_team: demoTeams[4],
-
-    away_team: demoTeams[5],
-
-    start_time: "15:00"
-
-  },
-
-
-  {
-
-    id: 4,
-
-    sport: "football",
-
-    court: "Cancha 1",
-
-    group_name: "Grupo B",
-
-    status: "pending",
-
-    home_score: 0,
-
-    away_score: 0,
-
-    home_team: demoTeams[2],
-
-    away_team: demoTeams[6],
-
-    start_time: "16:30"
-
-  },
-
-
-  {
-
-    id: 5,
-
-    sport: "football",
-
-    court: "Cancha 2",
-
-    group_name: "Grupo A",
-
-    status: "pending",
-
-    home_score: 0,
-
-    away_score: 0,
-
-    home_team: demoTeams[3],
-
-    away_team: demoTeams[1],
-
-    start_time: "18:00"
-
-  },
-
-
-  {
-
-    id: 6,
-
-    sport: "football",
-
-    court: "Cancha 3",
-
-    group_name: "Grupo B",
-
-    status: "pending",
-
-    home_score: 0,
-
-    away_score: 0,
-
-    home_team: demoTeams[0],
-
-    away_team: demoTeams[4],
-
-    start_time: "19:30"
-
-  }
-
-];
-
-
-const demoEvents = [
-
-  {
-    id: 1,
-    match_id: 1,
-    event_type: "goal",
-    player_name: "Tomás Roldán",
-    minute: 8
-  },
-
-  {
-    id: 2,
-    match_id: 1,
-    event_type: "goal",
-    player_name: "Mateo Díaz",
-    minute: 12
-  },
-
-  {
-    id: 3,
-    match_id: 1,
-    event_type: "goal",
-    player_name: "Lucas Fernández",
-    minute: 14
-  },
-
-  {
-    id: 4,
-    match_id: 2,
-    event_type: "goal",
-    player_name: "Nicolás Gómez",
-    minute: 23
-  }
-
-];
-
+let publicRealtimeChannel = null;
+let publicClockInterval = null;
 
 
 // ======================================================
@@ -288,10 +34,15 @@ async function initApp() {
 
   await loadData();
 
+  updateSportNavigation();
+
   renderEverything();
 
-}
+  setupRealtime();
 
+  startPublicClock();
+
+}
 
 
 // ======================================================
@@ -307,7 +58,11 @@ async function loadData() {
       typeof supabaseClient === "undefined"
     ) {
 
-      useDemoData();
+      console.error(
+        "Supabase no está disponible."
+      );
+
+      clearData();
 
       return;
 
@@ -352,7 +107,7 @@ async function loadData() {
         matchError
       );
 
-      useDemoData();
+      clearData();
 
       return;
 
@@ -365,7 +120,13 @@ async function loadData() {
     } =
       await supabaseClient
         .from("match_events")
-        .select("*");
+        .select("*")
+        .order(
+          "created_at",
+          {
+            ascending: true
+          }
+        );
 
 
     if (eventError) {
@@ -378,57 +139,36 @@ async function loadData() {
     }
 
 
-    if (
-      !matchData ||
-      matchData.length === 0
-    ) {
-
-      useDemoData();
-
-      return;
-
-    }
-
-
     matches =
-      matchData;
+      matchData || [];
+
 
     events =
       eventData || [];
-
-
-    setupRealtime();
 
   }
 
   catch (error) {
 
     console.error(
-      "Error:",
+      "Error cargando datos:",
       error
     );
 
-    useDemoData();
+    clearData();
 
   }
 
 }
 
 
+function clearData() {
 
-function useDemoData() {
+  matches = [];
 
-  teams =
-    demoTeams;
-
-  matches =
-    demoMatches;
-
-  events =
-    demoEvents;
+  events = [];
 
 }
-
 
 
 // ======================================================
@@ -439,8 +179,7 @@ function useDemoData() {
 function setupRealtime() {
 
   if (
-    typeof supabaseClient ===
-    "undefined"
+    typeof supabaseClient === "undefined"
   ) {
 
     return;
@@ -448,65 +187,127 @@ function setupRealtime() {
   }
 
 
-  supabaseClient
-    .channel(
-      "public-results"
-    )
+  if (publicRealtimeChannel) {
 
-    .on(
+    return;
 
-      "postgres_changes",
-
-      {
-
-        event: "*",
-
-        schema: "public",
-
-        table: "matches"
-
-      },
-
-      async () => {
-
-        await loadData();
-
-        renderEverything();
-
-      }
-
-    )
+  }
 
 
-    .on(
+  const reloadPublicData =
+    async () => {
 
-      "postgres_changes",
+      await loadData();
 
-      {
+      renderEverything();
 
-        event: "*",
-
-        schema: "public",
-
-        table: "match_events"
-
-      },
-
-      async () => {
-
-        await loadData();
-
-        renderEverything();
-
-      }
-
-    )
+    };
 
 
-    .subscribe();
+  publicRealtimeChannel =
+    supabaseClient
+
+      .channel(
+        "copa-raices-public-results"
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+
+          event: "*",
+
+          schema: "public",
+
+          table: "matches"
+
+        },
+
+        reloadPublicData
+
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+
+          event: "*",
+
+          schema: "public",
+
+          table: "match_events"
+
+        },
+
+        reloadPublicData
+
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+
+          event: "*",
+
+          schema: "public",
+
+          table: "teams"
+
+        },
+
+        reloadPublicData
+
+      )
+
+      .subscribe(
+        status => {
+
+          console.log(
+            "Realtime:",
+            status
+          );
+
+        }
+      );
 
 }
 
+
+// ======================================================
+// RELOJ PÚBLICO
+// ======================================================
+
+
+function startPublicClock() {
+
+  if (publicClockInterval) {
+
+    clearInterval(
+      publicClockInterval
+    );
+
+  }
+
+
+  publicClockInterval =
+    setInterval(
+      () => {
+
+        renderLive();
+
+        renderSchedule();
+
+      },
+      1000
+    );
+
+}
 
 
 // ======================================================
@@ -540,7 +341,6 @@ function setupNavigation() {
 }
 
 
-
 function setupLinks() {
 
   document
@@ -563,7 +363,6 @@ function setupLinks() {
     });
 
 }
-
 
 
 function openSection(sectionId) {
@@ -607,7 +406,7 @@ function openSection(sectionId) {
         "active",
 
         button.dataset.section ===
-        sectionId
+          sectionId
 
       );
 
@@ -620,7 +419,6 @@ function openSection(sectionId) {
   });
 
 }
-
 
 
 // ======================================================
@@ -662,6 +460,8 @@ function setupSportSelector() {
           );
 
 
+          updateSportNavigation();
+
           renderEverything();
 
         }
@@ -671,6 +471,48 @@ function setupSportSelector() {
 
 }
 
+
+function updateSportNavigation() {
+
+  const scorerButtons =
+    document.querySelectorAll(
+      '[data-section="scorers"]'
+    );
+
+
+  scorerButtons.forEach(
+    button => {
+
+      button.style.display =
+        currentSport === "padel"
+          ? "none"
+          : "";
+
+    }
+  );
+
+
+  const scorersSection =
+    document.getElementById(
+      "scorers"
+    );
+
+
+  if (
+    currentSport === "padel" &&
+    scorersSection &&
+    scorersSection
+      .classList
+      .contains("active")
+  ) {
+
+    openSection(
+      "live"
+    );
+
+  }
+
+}
 
 
 // ======================================================
@@ -695,7 +537,6 @@ function renderEverything() {
 }
 
 
-
 // ======================================================
 // FILTER
 // ======================================================
@@ -705,11 +546,11 @@ function sportMatches() {
 
   return matches.filter(
     match =>
-      match.sport === currentSport
+      match.sport ===
+      currentSport
   );
 
 }
-
 
 
 // ======================================================
@@ -717,20 +558,22 @@ function sportMatches() {
 // ======================================================
 
 
-function initials(name = "") {
+function initials(
+  name = ""
+) {
 
   return name
     .split(" ")
     .filter(Boolean)
-    .slice(0,2)
-    .map(word =>
-      word[0]
+    .slice(0, 2)
+    .map(
+      word =>
+        word[0]
     )
     .join("")
     .toUpperCase();
 
 }
-
 
 
 function teamName(team) {
@@ -741,26 +584,117 @@ function teamName(team) {
 }
 
 
-
 // ======================================================
 // TIME
 // ======================================================
 
 
-function getMinute(match) {
+function getElapsedSeconds(
+  match
+) {
 
-  return Math.floor(
-    (
+  let seconds =
+    Number(
       match.elapsed_seconds ||
       0
+    );
+
+
+  if (
+    match.clock_running &&
+    match.clock_started_at
+  ) {
+
+    const startedAt =
+      new Date(
+        match.clock_started_at
+      ).getTime();
+
+
+    const now =
+      Date.now();
+
+
+    seconds +=
+      Math.max(
+        0,
+        Math.floor(
+          (now - startedAt) /
+          1000
+        )
+      );
+
+  }
+
+
+  return seconds;
+
+}
+
+
+function getMinute(
+  match
+) {
+
+  return Math.floor(
+    getElapsedSeconds(
+      match
     ) / 60
   );
 
 }
 
 
+function getClock(
+  match
+) {
 
-function normalizeTime(time) {
+  const totalSeconds =
+    getElapsedSeconds(
+      match
+    );
+
+
+  const minutes =
+    Math.floor(
+      totalSeconds / 60
+    );
+
+
+  const seconds =
+    totalSeconds % 60;
+
+
+  return (
+
+    String(
+      minutes
+    ).padStart(
+      2,
+      "0"
+    )
+
+    +
+
+    ":"
+
+    +
+
+    String(
+      seconds
+    ).padStart(
+      2,
+      "0"
+    )
+
+  );
+
+}
+
+
+function normalizeTime(
+  time
+) {
 
   if (!time) {
 
@@ -770,10 +704,143 @@ function normalizeTime(time) {
 
 
   return time
-    .slice(0,5);
+    .slice(
+      0,
+      5
+    );
 
 }
 
+
+// ======================================================
+// PÁDEL
+// ======================================================
+
+
+function padelPointLabel(
+  value
+) {
+
+  const points = [
+    "0",
+    "15",
+    "30",
+    "40"
+  ];
+
+
+  const index =
+    Math.max(
+      0,
+      Math.min(
+        3,
+        Number(
+          value || 0
+        )
+      )
+    );
+
+
+  return points[index];
+
+}
+
+
+function padelCurrentScore(
+  match
+) {
+
+  if (
+    match.padel_tiebreak
+  ) {
+
+    return {
+
+      home:
+        Number(
+          match.padel_home_tiebreak ||
+          0
+        ),
+
+      away:
+        Number(
+          match.padel_away_tiebreak ||
+          0
+        ),
+
+      label:
+        "TIE-BREAK"
+
+    };
+
+  }
+
+
+  const homePoints =
+    Number(
+      match.padel_home_points ||
+      0
+    );
+
+
+  const awayPoints =
+    Number(
+      match.padel_away_points ||
+      0
+    );
+
+
+  return {
+
+    home:
+      padelPointLabel(
+        homePoints
+      ),
+
+    away:
+      padelPointLabel(
+        awayPoints
+      ),
+
+    label:
+      (
+        homePoints === 3 &&
+        awayPoints === 3
+      )
+
+        ? "PUNTO DE ORO"
+
+        : "PUNTOS"
+
+  };
+
+}
+
+
+function padelHomeGames(
+  match
+) {
+
+  return Number(
+    match.padel_home_games ??
+    match.home_score ??
+    0
+  );
+
+}
+
+
+function padelAwayGames(
+  match
+) {
+
+  return Number(
+    match.padel_away_games ??
+    match.away_score ??
+    0
+  );
+
+}
 
 
 // ======================================================
@@ -789,26 +856,52 @@ function renderLive() {
     );
 
 
+  if (!container) {
+
+    return;
+
+  }
+
+
   const live =
     sportMatches()
       .filter(
         match =>
-          match.status === "live"
+          match.status ===
+          "live"
       );
 
 
-  document.getElementById(
-    "liveMatchCount"
-  ).textContent =
-    live.length;
+  const count =
+    document.getElementById(
+      "liveMatchCount"
+    );
 
 
-  document.getElementById(
-    "liveCounterText"
-  ).textContent =
-    live.length
-      ? `En vivo (${live.length})`
-      : "Sin partidos en vivo";
+  if (count) {
+
+    count.textContent =
+      live.length;
+
+  }
+
+
+  const counterText =
+    document.getElementById(
+      "liveCounterText"
+    );
+
+
+  if (counterText) {
+
+    counterText.textContent =
+      live.length
+
+        ? `En vivo (${live.length})`
+
+        : "Sin partidos en vivo";
+
+  }
 
 
   if (!live.length) {
@@ -837,22 +930,62 @@ function renderLive() {
     live
       .map(
         match =>
-          liveCardHTML(match)
+          liveCardHTML(
+            match
+          )
       )
       .join("");
 
 }
 
 
+// ======================================================
+// LIVE CARD
+// ======================================================
 
-function liveCardHTML(match) {
+
+function liveCardHTML(
+  match
+) {
+
+  if (
+    match.sport === "padel"
+  ) {
+
+    return padelLiveCardHTML(
+      match
+    );
+
+  }
+
+
+  return footballLiveCardHTML(
+    match
+  );
+
+}
+
+
+// ======================================================
+// FÚTBOL LIVE CARD
+// ======================================================
+
+
+function footballLiveCardHTML(
+  match
+) {
 
   const matchEvents =
     events
+
       .filter(
         event =>
-          event.match_id ===
-          match.id
+          Number(
+            event.match_id
+          ) ===
+          Number(
+            match.id
+          )
       )
 
       .filter(
@@ -861,7 +994,9 @@ function liveCardHTML(match) {
           "goal"
       )
 
-      .slice(-3);
+      .slice(
+        -3
+      );
 
 
   const eventsHTML =
@@ -870,27 +1005,32 @@ function liveCardHTML(match) {
       ?
 
       matchEvents
-        .map(event => `
 
-          <div class="match-event">
+        .map(
+          event => `
 
-            <div class="event-info">
+            <div class="match-event">
 
-              <span>⚽</span>
+              <div class="event-info">
 
-              <span class="event-minute">
-                ${event.minute}'
-              </span>
+                <span>
+                  ⚽
+                </span>
 
-              <span>
-                ${event.player_name || "Gol"}
-              </span>
+                <span class="event-minute">
+                  ${event.minute}'
+                </span>
+
+                <span>
+                  ${event.player_name || "Gol"}
+                </span>
+
+              </div>
 
             </div>
 
-          </div>
-
-        `)
+          `
+        )
 
         .join("")
 
@@ -913,7 +1053,6 @@ function liveCardHTML(match) {
 
     <article class="live-match-card">
 
-
       <div class="match-card-top">
 
         <span class="live-label">
@@ -925,9 +1064,16 @@ function liveCardHTML(match) {
 
           ${match.court || "Cancha"}
 
-          ·
+          ${
 
-          ${match.group_name || ""}
+            match.group_name
+
+              ? " · " +
+                match.group_name
+
+              : ""
+
+          }
 
         </span>
 
@@ -938,12 +1084,11 @@ function liveCardHTML(match) {
 
           ·
 
-          ${getMinute(match)}'
+          ${getClock(match)}
 
         </span>
 
       </div>
-
 
 
       <div class="match-score-layout">
@@ -954,7 +1099,9 @@ function liveCardHTML(match) {
           <div class="team-crest">
 
             ${initials(
-              teamName(match.home_team)
+              teamName(
+                match.home_team
+              )
             )}
 
           </div>
@@ -971,7 +1118,6 @@ function liveCardHTML(match) {
         </div>
 
 
-
         <div class="score-number">
 
           ${match.home_score ?? 0}
@@ -983,13 +1129,14 @@ function liveCardHTML(match) {
         </div>
 
 
-
         <div class="match-team">
 
           <div class="team-crest">
 
             ${initials(
-              teamName(match.away_team)
+              teamName(
+                match.away_team
+              )
             )}
 
           </div>
@@ -1009,7 +1156,6 @@ function liveCardHTML(match) {
       </div>
 
 
-
       <div class="match-events">
 
         ${eventsHTML}
@@ -1023,6 +1169,173 @@ function liveCardHTML(match) {
 
 }
 
+
+// ======================================================
+// PÁDEL LIVE CARD
+// ======================================================
+
+
+function padelLiveCardHTML(
+  match
+) {
+
+  const point =
+    padelCurrentScore(
+      match
+    );
+
+
+  const homeGames =
+    padelHomeGames(
+      match
+    );
+
+
+  const awayGames =
+    padelAwayGames(
+      match
+    );
+
+
+  return `
+
+    <article class="
+      live-match-card
+      padel-live-card
+    ">
+
+
+      <div class="match-card-top">
+
+        <span class="live-label">
+          EN VIVO
+        </span>
+
+
+        <span class="match-location">
+
+          ${match.court || "Cancha"}
+
+          ${
+
+            match.group_name
+
+              ? " · " +
+                match.group_name
+
+              : ""
+
+          }
+
+        </span>
+
+
+        <span class="match-clock">
+
+          SET ÚNICO
+
+          ·
+
+          ${getClock(match)}
+
+        </span>
+
+      </div>
+
+
+      <div class="padel-live-score">
+
+
+        <div class="
+          padel-player-name
+          padel-player-home
+        ">
+
+          ${teamName(
+            match.home_team
+          )}
+
+        </div>
+
+
+        <div class="
+          padel-player-name
+          padel-player-away
+        ">
+
+          ${teamName(
+            match.away_team
+          )}
+
+        </div>
+
+
+        <div class="
+          padel-score-label
+          padel-games-label
+        ">
+          GAMES
+        </div>
+
+
+        <strong class="
+          padel-game-number
+          padel-home-game
+        ">
+
+          ${homeGames}
+
+        </strong>
+
+
+        <strong class="
+          padel-game-number
+          padel-away-game
+        ">
+
+          ${awayGames}
+
+        </strong>
+
+
+        <div class="
+          padel-score-label
+          padel-point-label
+        ">
+
+          ${point.label}
+
+        </div>
+
+
+        <strong class="
+          padel-current-point
+          padel-home-point
+        ">
+
+          ${point.home}
+
+        </strong>
+
+
+        <strong class="
+          padel-current-point
+          padel-away-point
+        ">
+
+          ${point.away}
+
+        </strong>
+
+
+      </div>
+
+
+    </article>
+
+  `;
+
+}
 
 
 // ======================================================
@@ -1038,6 +1351,13 @@ function renderUpcoming() {
     );
 
 
+  if (!container) {
+
+    return;
+
+  }
+
+
   const upcoming =
     sportMatches()
 
@@ -1047,7 +1367,10 @@ function renderUpcoming() {
           "pending"
       )
 
-      .slice(0,4);
+      .slice(
+        0,
+        4
+      );
 
 
   if (!upcoming.length) {
@@ -1070,104 +1393,113 @@ function renderUpcoming() {
 
 
   container.innerHTML =
-    upcoming.map(match => `
+    upcoming
+      .map(
+        match => `
 
-      <article class="upcoming-card">
-
-
-        <div class="upcoming-card-top">
-
-          <span class="upcoming-time">
-
-            Hoy ·
-            ${normalizeTime(
-              match.start_time
-            )}
-
-          </span>
+          <article class="upcoming-card">
 
 
-          <span>
+            <div class="upcoming-card-top">
 
-            ${match.court || ""}
+              <span class="upcoming-time">
 
-            ·
+                Hoy ·
 
-            ${match.group_name || ""}
+                ${normalizeTime(
+                  match.start_time
+                )}
 
-          </span>
-
-        </div>
-
-
-
-        <div class="upcoming-versus">
+              </span>
 
 
-          <div class="small-team">
+              <span>
 
-            <div class="small-crest">
+                ${match.court || ""}
 
-              ${initials(
-                teamName(
-                  match.home_team
-                )
-              )}
+                ${
+
+                  match.group_name
+
+                    ? " · " +
+                      match.group_name
+
+                    : ""
+
+                }
+
+              </span>
 
             </div>
 
 
-            <span class="small-team-name">
-
-              ${teamName(
-                match.home_team
-              )}
-
-            </span>
-
-          </div>
+            <div class="upcoming-versus">
 
 
+              <div class="small-team">
 
-          <span class="vs">
-            vs
-          </span>
+                <div class="small-crest">
+
+                  ${initials(
+                    teamName(
+                      match.home_team
+                    )
+                  )}
+
+                </div>
 
 
+                <span class="small-team-name">
 
-          <div class="small-team">
+                  ${teamName(
+                    match.home_team
+                  )}
 
-            <div class="small-crest">
+                </span>
 
-              ${initials(
-                teamName(
-                  match.away_team
-                )
-              )}
+              </div>
+
+
+              <span class="vs">
+                vs
+              </span>
+
+
+              <div class="small-team">
+
+                <div class="small-crest">
+
+                  ${initials(
+                    teamName(
+                      match.away_team
+                    )
+                  )}
+
+                </div>
+
+
+                <span class="small-team-name">
+
+                  ${teamName(
+                    match.away_team
+                  )}
+
+                </span>
+
+              </div>
+
 
             </div>
 
 
-            <span class="small-team-name">
+          </article>
 
-              ${teamName(
-                match.away_team
-              )}
+        `
+      )
 
-            </span>
-
-          </div>
-
-
-        </div>
-
-
-      </article>
-
-    `).join("");
+      .join("");
 
 }
-
 
 
 // ======================================================
@@ -1183,18 +1515,33 @@ function renderSchedule() {
     );
 
 
+  if (!container) {
+
+    return;
+
+  }
+
+
   const list =
     sportMatches()
-      .slice(0,7);
+      .slice(
+        0,
+        7
+      );
 
 
   const today =
     new Intl.DateTimeFormat(
       "es-AR",
       {
-        weekday: "long",
-        day: "numeric",
-        month: "long"
+        weekday:
+          "long",
+
+        day:
+          "numeric",
+
+        month:
+          "long"
       }
     )
     .format(
@@ -1202,82 +1549,124 @@ function renderSchedule() {
     );
 
 
-  document.getElementById(
-    "scheduleDate"
-  ).textContent =
-    today.charAt(0).toUpperCase() +
-    today.slice(1);
+  const scheduleDate =
+    document.getElementById(
+      "scheduleDate"
+    );
+
+
+  if (scheduleDate) {
+
+    scheduleDate.textContent =
+
+      today
+        .charAt(0)
+        .toUpperCase()
+
+      +
+
+      today
+        .slice(1);
+
+  }
+
+
+  if (!list.length) {
+
+    container.innerHTML = `
+
+      <div class="admin-empty">
+        Sin partidos.
+      </div>
+
+    `;
+
+    return;
+
+  }
 
 
   container.innerHTML =
-    list.map(match => {
+    list
+      .map(
+        match => {
 
-      const live =
-        match.status === "live";
-
-
-      return `
-
-        <div class="schedule-row">
+          const live =
+            match.status ===
+            "live";
 
 
-          <span
-            class="
-              schedule-status-dot
-              ${live ? "live" : ""}
-            "
-          >
-          </span>
+          const finished =
+            match.status ===
+            "finished";
 
 
-          <span class="schedule-time">
-
-            ${
-              live
-                ? match.court || ""
-                : normalizeTime(
-                    match.start_time
-                  )
-            }
-
-          </span>
+          let scoreHTML =
+            "";
 
 
-          <span class="schedule-game">
+          if (
+            match.sport ===
+            "padel"
+          ) {
 
-            ${match.court || ""}
+            const point =
+              padelCurrentScore(
+                match
+              );
 
-          </span>
 
+            if (live) {
 
-          ${
-            live
-
-              ?
-
-              `
+              scoreHTML = `
 
                 <div>
 
                   <span class="schedule-score">
 
-                    ${match.home_score}
+                    ${padelHomeGames(match)}
+
                     -
-                    ${match.away_score}
+
+                    ${padelAwayGames(match)}
 
                   </span>
 
                   <span class="schedule-live">
-                    EN VIVO
+
+                    ${point.home}
+                    -
+                    ${point.away}
+
                   </span>
 
                 </div>
 
-              `
+              `;
 
-              :
+            }
 
-              `
+            else if (finished) {
+
+              scoreHTML = `
+
+                <span class="schedule-score">
+
+                  ${padelHomeGames(match)}
+
+                  -
+
+                  ${padelAwayGames(match)}
+
+                </span>
+
+              `;
+
+            }
+
+            else {
+
+              scoreHTML = `
 
                 <span class="schedule-score">
 
@@ -1297,18 +1686,136 @@ function renderSchedule() {
 
                 </span>
 
-              `
+              `;
+
+            }
+
+          }
+
+          else {
+
+            if (
+              live ||
+              finished
+            ) {
+
+              scoreHTML = `
+
+                <div>
+
+                  <span class="schedule-score">
+
+                    ${match.home_score ?? 0}
+
+                    -
+
+                    ${match.away_score ?? 0}
+
+                  </span>
+
+                  ${
+
+                    live
+
+                      ? `
+
+                        <span class="schedule-live">
+                          EN VIVO
+                        </span>
+
+                      `
+
+                      : ""
+
+                  }
+
+                </div>
+
+              `;
+
+            }
+
+            else {
+
+              scoreHTML = `
+
+                <span class="schedule-score">
+
+                  ${initials(
+                    teamName(
+                      match.home_team
+                    )
+                  )}
+
+                  vs
+
+                  ${initials(
+                    teamName(
+                      match.away_team
+                    )
+                  )}
+
+                </span>
+
+              `;
+
+            }
+
           }
 
 
-        </div>
+          return `
 
-      `;
+            <div class="schedule-row">
 
-    }).join("");
+
+              <span
+                class="
+                  schedule-status-dot
+                  ${live ? "live" : ""}
+                "
+              >
+              </span>
+
+
+              <span class="schedule-time">
+
+                ${
+
+                  live
+
+                    ? match.court ||
+                      ""
+
+                    : normalizeTime(
+                        match.start_time
+                      )
+
+                }
+
+              </span>
+
+
+              <span class="schedule-game">
+
+                ${match.court || ""}
+
+              </span>
+
+
+              ${scoreHTML}
+
+
+            </div>
+
+          `;
+
+        }
+      )
+
+      .join("");
 
 }
-
 
 
 // ======================================================
@@ -1322,6 +1829,13 @@ function renderFixture() {
     document.getElementById(
       "fixtureContent"
     );
+
+
+  if (!container) {
+
+    return;
+
+  }
 
 
   const list =
@@ -1348,92 +1862,203 @@ function renderFixture() {
 
 
   container.innerHTML =
-    list.map(match => `
+    list
 
-      <div class="fixture-row">
+      .map(
+        match => {
 
-
-        <div class="fixture-date">
-
-          ${normalizeTime(
-            match.start_time
-          )}
-
-          <br>
-
-          ${match.court || ""}
-
-        </div>
+          const isPadel =
+            match.sport ===
+            "padel";
 
 
-        <div class="fixture-teams">
+          const homeScore =
+            isPadel
+
+              ? padelHomeGames(
+                  match
+                )
+
+              : match.home_score ??
+                0;
 
 
-          <div class="fixture-team-side">
+          const awayScore =
+            isPadel
 
-            <span class="fixture-team-name">
-              ${teamName(match.home_team)}
-            </span>
+              ? padelAwayGames(
+                  match
+                )
 
-            ${
-              match.status !== "pending"
-                ? `
-                  <strong class="fixture-team-score">
-                    ${match.home_score}
-                  </strong>
-                `
-                : ""
-            }
-
-          </div>
+              : match.away_score ??
+                0;
 
 
-          <span class="fixture-vs">
-            vs
-          </span>
+          let resultText =
+            "";
 
 
-          <div class="fixture-team-side">
+          if (
+            match.status ===
+            "pending"
+          ) {
 
-            <span class="fixture-team-name">
-              ${teamName(match.away_team)}
-            </span>
+            resultText =
+              "Próximo";
 
-            ${
-              match.status !== "pending"
-                ? `
-                  <strong class="fixture-team-score">
-                    ${match.away_score}
-                  </strong>
-                `
-                : ""
-            }
-
-          </div>
-
-
-        </div>
-
-
-        <div class="fixture-result">
-
-          ${
-            match.status === "pending"
-              ? "Próximo"
-              : match.status === "live"
-                ? "EN VIVO"
-                : "FINAL"
           }
 
-        </div>
+          else if (
+            match.status ===
+            "live"
+          ) {
+
+            if (isPadel) {
+
+              const point =
+                padelCurrentScore(
+                  match
+                );
 
 
-      </div>
+              resultText =
+                `EN VIVO · ${point.home}-${point.away}`;
 
-    `).join("");
+            }
+
+            else {
+
+              resultText =
+                "EN VIVO";
+
+            }
+
+          }
+
+          else {
+
+            resultText =
+              "FINAL";
+
+          }
+
+
+          return `
+
+            <div class="fixture-row">
+
+
+              <div class="fixture-date">
+
+                ${normalizeTime(
+                  match.start_time
+                )}
+
+                <br>
+
+                ${match.court || ""}
+
+              </div>
+
+
+              <div class="fixture-teams">
+
+
+                <div class="fixture-team-side">
+
+                  <span class="fixture-team-name">
+
+                    ${teamName(
+                      match.home_team
+                    )}
+
+                  </span>
+
+
+                  ${
+
+                    match.status !==
+                    "pending"
+
+                      ? `
+
+                        <strong class="
+                          fixture-team-score
+                        ">
+
+                          ${homeScore}
+
+                        </strong>
+
+                      `
+
+                      : ""
+
+                  }
+
+                </div>
+
+
+                <span class="fixture-vs">
+                  vs
+                </span>
+
+
+                <div class="fixture-team-side">
+
+                  <span class="fixture-team-name">
+
+                    ${teamName(
+                      match.away_team
+                    )}
+
+                  </span>
+
+
+                  ${
+
+                    match.status !==
+                    "pending"
+
+                      ? `
+
+                        <strong class="
+                          fixture-team-score
+                        ">
+
+                          ${awayScore}
+
+                        </strong>
+
+                      `
+
+                      : ""
+
+                  }
+
+                </div>
+
+
+              </div>
+
+
+              <div class="fixture-result">
+
+                ${resultText}
+
+              </div>
+
+
+            </div>
+
+          `;
+
+        }
+      )
+
+      .join("");
 
 }
-
 
 
 // ======================================================
@@ -1449,67 +2074,118 @@ function renderStandings() {
     );
 
 
+  if (!body) {
+
+    return;
+
+  }
+
+
   const table =
     calculateStandings();
 
 
+  if (!table.length) {
+
+    body.innerHTML = `
+
+      <tr>
+
+        <td
+          colspan="8"
+          style="
+            text-align:center;
+            padding:30px;
+          "
+        >
+          Todavía no hay partidos finalizados.
+        </td>
+
+      </tr>
+
+    `;
+
+    return;
+
+  }
+
+
   body.innerHTML =
-    table.map(
-      (team, index) => `
+    table
 
-        <tr>
+      .map(
+        (
+          team,
+          index
+        ) => `
 
-          <td>
-            ${index + 1}
-          </td>
+          <tr>
 
-          <td>
-            <strong>
-              ${team.name}
-            </strong>
-          </td>
+            <td>
+              ${index + 1}
+            </td>
 
-          <td>
-            ${team.pj}
-          </td>
+            <td>
 
-          <td>
-            ${team.pg}
-          </td>
+              <strong>
+                ${team.name}
+              </strong>
 
-          <td>
-            ${team.pe}
-          </td>
+            </td>
 
-          <td>
-            ${team.pp}
-          </td>
+            <td>
+              ${team.pj}
+            </td>
 
-          <td>
+            <td>
+              ${team.pg}
+            </td>
 
-            ${
-              team.dg > 0
-                ? "+"
-                : ""
-            }
+            <td>
+              ${team.pe}
+            </td>
 
-            ${team.dg}
+            <td>
+              ${team.pp}
+            </td>
 
-          </td>
+            <td>
 
-          <td>
-            <strong>
-              ${team.pts}
-            </strong>
-          </td>
+              ${
 
-        </tr>
+                team.dg > 0
 
-      `
-    ).join("");
+                  ? "+"
+
+                  : ""
+
+              }
+
+              ${team.dg}
+
+            </td>
+
+            <td>
+
+              <strong>
+                ${team.pts}
+              </strong>
+
+            </td>
+
+          </tr>
+
+        `
+      )
+
+      .join("");
 
 }
 
+
+// ======================================================
+// CALCULATE STANDINGS
+// ======================================================
 
 
 function calculateStandings() {
@@ -1519,158 +2195,219 @@ function calculateStandings() {
 
 
   sportMatches()
+
     .filter(
       match =>
         match.status ===
         "finished"
     )
 
-    .forEach(match => {
+    .forEach(
+      match => {
 
-      const home =
-        teamName(
-          match.home_team
-        );
-
-
-      const away =
-        teamName(
-          match.away_team
-        );
+        const home =
+          teamName(
+            match.home_team
+          );
 
 
-      if (!data[home]) {
+        const away =
+          teamName(
+            match.away_team
+          );
 
-        data[home] =
-          newTeamTable(home);
+
+        if (!data[home]) {
+
+          data[home] =
+            newTeamTable(
+              home
+            );
+
+        }
+
+
+        if (!data[away]) {
+
+          data[away] =
+            newTeamTable(
+              away
+            );
+
+        }
+
+
+        const h =
+          Number(
+
+            match.sport ===
+            "padel"
+
+              ? padelHomeGames(
+                  match
+                )
+
+              : match.home_score ||
+                0
+
+          );
+
+
+        const a =
+          Number(
+
+            match.sport ===
+            "padel"
+
+              ? padelAwayGames(
+                  match
+                )
+
+              : match.away_score ||
+                0
+
+          );
+
+
+        data[home].pj++;
+
+        data[away].pj++;
+
+
+        data[home].gf +=
+          h;
+
+        data[home].gc +=
+          a;
+
+
+        data[away].gf +=
+          a;
+
+        data[away].gc +=
+          h;
+
+
+        if (h > a) {
+
+          data[home].pg++;
+
+          data[home].pts +=
+            3;
+
+          data[away].pp++;
+
+        }
+
+        else if (a > h) {
+
+          data[away].pg++;
+
+          data[away].pts +=
+            3;
+
+          data[home].pp++;
+
+        }
+
+        else {
+
+          data[home].pe++;
+
+          data[away].pe++;
+
+          data[home].pts++;
+
+          data[away].pts++;
+
+        }
 
       }
-
-
-      if (!data[away]) {
-
-        data[away] =
-          newTeamTable(away);
-
-      }
-
-
-      const h =
-        Number(
-          match.home_score || 0
-        );
-
-
-      const a =
-        Number(
-          match.away_score || 0
-        );
-
-
-      data[home].pj++;
-
-      data[away].pj++;
-
-
-      data[home].gf += h;
-
-      data[home].gc += a;
-
-
-      data[away].gf += a;
-
-      data[away].gc += h;
-
-
-      if (h > a) {
-
-        data[home].pg++;
-
-        data[home].pts += 3;
-
-        data[away].pp++;
-
-      }
-
-      else if (a > h) {
-
-        data[away].pg++;
-
-        data[away].pts += 3;
-
-        data[home].pp++;
-
-      }
-
-      else {
-
-        data[home].pe++;
-
-        data[away].pe++;
-
-        data[home].pts++;
-
-        data[away].pts++;
-
-      }
-
-    });
+    );
 
 
   return Object
-    .values(data)
 
-    .map(team => {
+    .values(
+      data
+    )
 
-      team.dg =
-        team.gf -
-        team.gc;
+    .map(
+      team => {
 
-      return team;
+        team.dg =
+          team.gf -
+          team.gc;
 
-    })
+        return team;
+
+      }
+    )
 
     .sort(
-      (a,b) =>
+      (
+        a,
+        b
+      ) =>
 
-        b.pts - a.pts ||
+        b.pts -
+        a.pts
 
-        b.dg - a.dg ||
+        ||
 
-        b.gf - a.gf
+        b.dg -
+        a.dg
+
+        ||
+
+        b.gf -
+        a.gf
 
     );
 
 }
 
 
+// ======================================================
+// NEW TEAM TABLE
+// ======================================================
 
-function newTeamTable(name) {
+
+function newTeamTable(
+  name
+) {
 
   return {
 
     name,
 
-    pj: 0,
+    pj:
+      0,
 
-    pg: 0,
+    pg:
+      0,
 
-    pe: 0,
+    pe:
+      0,
 
-    pp: 0,
+    pp:
+      0,
 
-    gf: 0,
+    gf:
+      0,
 
-    gc: 0,
+    gc:
+      0,
 
-    dg: 0,
+    dg:
+      0,
 
-    pts: 0
+    pts:
+      0
 
   };
 
 }
-
 
 
 // ======================================================
@@ -1686,6 +2423,47 @@ function renderScorers() {
     );
 
 
+  if (!container) {
+
+    return;
+
+  }
+
+
+  if (
+    currentSport ===
+    "padel"
+  ) {
+
+    container.innerHTML =
+      "";
+
+    return;
+
+  }
+
+
+  const footballMatchIds =
+    new Set(
+
+      matches
+
+        .filter(
+          match =>
+            match.sport ===
+            "football"
+        )
+
+        .map(
+          match =>
+            Number(
+              match.id
+            )
+        )
+
+    );
+
+
   const goals =
     {};
 
@@ -1698,32 +2476,51 @@ function renderScorers() {
         "goal"
     )
 
-    .forEach(event => {
+    .filter(
+      event =>
+        footballMatchIds.has(
+          Number(
+            event.match_id
+          )
+        )
+    )
 
-      const player =
-        event.player_name ||
-        "Jugador";
+    .forEach(
+      event => {
+
+        const player =
+          event.player_name ||
+          "Jugador";
 
 
-      if (!goals[player]) {
+        if (!goals[player]) {
 
-        goals[player] = 0;
+          goals[player] =
+            0;
+
+        }
+
+
+        goals[player]++;
 
       }
-
-
-      goals[player]++;
-
-    });
+    );
 
 
   const ranking =
     Object
-      .entries(goals)
+
+      .entries(
+        goals
+      )
 
       .sort(
-        (a,b) =>
-          b[1] - a[1]
+        (
+          a,
+          b
+        ) =>
+          b[1] -
+          a[1]
       );
 
 
@@ -1747,43 +2544,52 @@ function renderScorers() {
 
 
   container.innerHTML =
-    ranking.map(
-      ([player,goals],index) => `
+    ranking
 
-        <article class="scorer-card">
+      .map(
+        (
+          [
+            player,
+            goals
+          ],
+          index
+        ) => `
 
-
-          <div class="scorer-position">
-
-            ${index + 1}
-
-          </div>
-
-
-          <div>
-
-            <strong>
-              ${player}
-            </strong>
-
-            <small>
-              Copa Raíces
-            </small>
-
-          </div>
+          <article class="scorer-card">
 
 
-          <div class="scorer-goals">
+            <div class="scorer-position">
 
-            ${goals}
+              ${index + 1}
 
-          </div>
+            </div>
 
 
-        </article>
+            <div>
 
-      `
-    )
-    .join("");
+              <strong>
+                ${player}
+              </strong>
+
+              <small>
+                Copa Raíces
+              </small>
+
+            </div>
+
+
+            <div class="scorer-goals">
+
+              ${goals}
+
+            </div>
+
+
+          </article>
+
+        `
+      )
+
+      .join("");
 
 }
