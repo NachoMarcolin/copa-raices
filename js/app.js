@@ -4025,3 +4025,586 @@ function padelLiveCardHTML(
   `;
 
 }
+
+// ======================================================
+// POSICIONES ESPECÍFICAS DE PÁDEL
+// PJ | PG | PP | PTS
+// GANADO = 1 PUNTO
+// ======================================================
+
+
+function calculatePadelStandings() {
+
+  const data = {};
+
+
+  sportMatches()
+    .filter(
+      match =>
+        match.status === "finished"
+    )
+    .forEach(
+      match => {
+
+        const home =
+          teamName(
+            match.home_team
+          );
+
+
+        const away =
+          teamName(
+            match.away_team
+          );
+
+
+        if (!data[home]) {
+
+          data[home] = {
+            name: home,
+            pj: 0,
+            pg: 0,
+            pp: 0,
+            pts: 0,
+            gameDiff: 0
+          };
+
+        }
+
+
+        if (!data[away]) {
+
+          data[away] = {
+            name: away,
+            pj: 0,
+            pg: 0,
+            pp: 0,
+            pts: 0,
+            gameDiff: 0
+          };
+
+        }
+
+
+        const homeGames =
+          padelHomeGames(
+            match
+          );
+
+
+        const awayGames =
+          padelAwayGames(
+            match
+          );
+
+
+        data[home].pj++;
+
+        data[away].pj++;
+
+
+        data[home].gameDiff +=
+          homeGames -
+          awayGames;
+
+
+        data[away].gameDiff +=
+          awayGames -
+          homeGames;
+
+
+        if (
+          homeGames >
+          awayGames
+        ) {
+
+          data[home].pg++;
+
+          data[home].pts++;
+
+
+          data[away].pp++;
+
+        }
+
+        else if (
+          awayGames >
+          homeGames
+        ) {
+
+          data[away].pg++;
+
+          data[away].pts++;
+
+
+          data[home].pp++;
+
+        }
+
+      }
+    );
+
+
+  return Object
+    .values(
+      data
+    )
+    .sort(
+      (a, b) =>
+
+        b.pts -
+        a.pts
+
+        ||
+
+        b.gameDiff -
+        a.gameDiff
+
+        ||
+
+        a.name.localeCompare(
+          b.name,
+          "es"
+        )
+    );
+
+}
+
+
+// ======================================================
+// NUEVO RENDER DE POSICIONES
+// FÚTBOL = GRUPOS
+// PÁDEL = TABLA SIMPLE
+// ======================================================
+
+
+function renderStandings() {
+
+  const section =
+    document.getElementById(
+      "standings"
+    );
+
+
+  if (!section) {
+
+    return;
+
+  }
+
+
+  let container =
+    document.getElementById(
+      "standingsGroups"
+    );
+
+
+  if (!container) {
+
+    const originalCard =
+      section.querySelector(
+        ".standings-card"
+      );
+
+
+    if (!originalCard) {
+
+      return;
+
+    }
+
+
+    container =
+      document.createElement(
+        "div"
+      );
+
+
+    container.id =
+      "standingsGroups";
+
+
+    container.className =
+      "standings-groups";
+
+
+    originalCard.replaceWith(
+      container
+    );
+
+  }
+
+
+  // ==================================================
+  // PÁDEL
+  // ==================================================
+
+  if (
+    currentSport ===
+    "padel"
+  ) {
+
+    const table =
+      calculatePadelStandings();
+
+
+    if (!table.length) {
+
+      container.innerHTML = `
+
+        <div class="empty-state">
+
+          <strong>
+            Todavía no hay partidos finalizados
+          </strong>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML = `
+
+      <div class="standings-card">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                #
+              </th>
+
+              <th>
+                Jugador / Pareja
+              </th>
+
+              <th>
+                PJ
+              </th>
+
+              <th>
+                PG
+              </th>
+
+              <th>
+                PP
+              </th>
+
+              <th>
+                PTS
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            ${
+
+              table
+                .map(
+                  (
+                    player,
+                    index
+                  ) => `
+
+                    <tr>
+
+                      <td>
+                        ${index + 1}
+                      </td>
+
+
+                      <td>
+
+                        <strong>
+                          ${player.name}
+                        </strong>
+
+                      </td>
+
+
+                      <td>
+                        ${player.pj}
+                      </td>
+
+
+                      <td>
+                        ${player.pg}
+                      </td>
+
+
+                      <td>
+                        ${player.pp}
+                      </td>
+
+
+                      <td>
+
+                        <strong>
+                          ${player.pts}
+                        </strong>
+
+                      </td>
+
+                    </tr>
+
+                  `
+                )
+                .join("")
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    `;
+
+
+    return;
+
+  }
+
+
+  // ==================================================
+  // FÚTBOL
+  // ==================================================
+
+  const groups =
+    calculateStandingsByGroup();
+
+
+  const groupNames =
+    Object
+      .keys(
+        groups
+      )
+      .sort(
+        (
+          a,
+          b
+        ) => {
+
+          if (
+            a === "General"
+          ) {
+
+            return 1;
+
+          }
+
+
+          if (
+            b === "General"
+          ) {
+
+            return -1;
+
+          }
+
+
+          return a.localeCompare(
+            b,
+            "es"
+          );
+
+        }
+      );
+
+
+  if (
+    !groupNames.length
+  ) {
+
+    container.innerHTML = `
+
+      <div class="empty-state">
+
+        <strong>
+          Todavía no hay equipos
+        </strong>
+
+      </div>
+
+    `;
+
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    groupNames
+
+      .map(
+        groupName => {
+
+          const table =
+            groups[
+              groupName
+            ];
+
+
+          return `
+
+            <section class="
+              standings-group
+            ">
+
+
+              <div class="
+                standings-group-title
+              ">
+
+                ${groupName}
+
+              </div>
+
+
+              <div class="
+                standings-card
+              ">
+
+
+                <table>
+
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        #
+                      </th>
+
+                      <th>
+                        Equipo
+                      </th>
+
+                      <th>
+                        PJ
+                      </th>
+
+                      <th>
+                        PG
+                      </th>
+
+                      <th>
+                        PE
+                      </th>
+
+                      <th>
+                        PP
+                      </th>
+
+                      <th>
+                        DG
+                      </th>
+
+                      <th>
+                        PTS
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody>
+
+                    ${
+
+                      table
+                        .map(
+                          (
+                            team,
+                            index
+                          ) => `
+
+                            <tr>
+
+                              <td>
+                                ${index + 1}
+                              </td>
+
+
+                              <td>
+
+                                <strong>
+                                  ${team.name}
+                                </strong>
+
+                              </td>
+
+
+                              <td>
+                                ${team.pj}
+                              </td>
+
+
+                              <td>
+                                ${team.pg}
+                              </td>
+
+
+                              <td>
+                                ${team.pe}
+                              </td>
+
+
+                              <td>
+                                ${team.pp}
+                              </td>
+
+
+                              <td>
+                                ${team.dg}
+                              </td>
+
+
+                              <td>
+
+                                <strong>
+                                  ${team.pts}
+                                </strong>
+
+                              </td>
+
+                            </tr>
+
+                          `
+                        )
+                        .join("")
+
+                    }
+
+                  </tbody>
+
+
+                </table>
+
+              </div>
+
+            </section>
+
+          `;
+
+        }
+      )
+
+      .join("");
+
+}
