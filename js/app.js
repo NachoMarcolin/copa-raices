@@ -1798,9 +1798,9 @@ function renderSchedule() {
 
               <span class="schedule-game">
 
-                ${match.court || ""}
+  ${getMatchGroup(match)}
 
-              </span>
+</span>
 
 
               ${scoreHTML}
