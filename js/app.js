@@ -2151,16 +2151,6 @@ function renderStandings() {
 
             <td>
 
-              ${
-
-                team.dg > 0
-
-                  ? "+"
-
-                  : ""
-
-              }
-
               ${team.dg}
 
             </td>
