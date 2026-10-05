@@ -2593,3 +2593,982 @@ function renderScorers() {
       .join("");
 
 }
+
+// ======================================================
+// POSICIONES POR GRUPOS
+// COPA RAÍCES
+// ======================================================
+
+
+// Sobrescribimos loadData para traer también
+// el grupo guardado en cada equipo.
+
+async function loadData() {
+
+  try {
+
+    if (
+      typeof supabaseClient ===
+      "undefined"
+    ) {
+
+      console.error(
+        "Supabase no está disponible."
+      );
+
+      clearData();
+
+      return;
+
+    }
+
+
+    const {
+      data: matchData,
+      error: matchError
+    } =
+      await supabaseClient
+
+        .from(
+          "matches"
+        )
+
+        .select(`
+
+          *,
+
+          home_team:teams!matches_home_team_id_fkey(
+            id,
+            name,
+            logo_url,
+            group_name
+          ),
+
+          away_team:teams!matches_away_team_id_fkey(
+            id,
+            name,
+            logo_url,
+            group_name
+          )
+
+        `)
+
+        .order(
+          "start_time",
+          {
+            ascending:
+              true
+          }
+        );
+
+
+    if (matchError) {
+
+      console.error(
+        "Error cargando partidos:",
+        matchError
+      );
+
+      clearData();
+
+      return;
+
+    }
+
+
+    const {
+      data: eventData,
+      error: eventError
+    } =
+      await supabaseClient
+
+        .from(
+          "match_events"
+        )
+
+        .select(
+          "*"
+        )
+
+        .order(
+          "created_at",
+          {
+            ascending:
+              true
+          }
+        );
+
+
+    if (eventError) {
+
+      console.error(
+        "Error cargando eventos:",
+        eventError
+      );
+
+    }
+
+
+    matches =
+      matchData || [];
+
+
+    events =
+      eventData || [];
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Error cargando datos:",
+      error
+    );
+
+
+    clearData();
+
+  }
+
+}
+
+
+// ======================================================
+// NORMALIZAR NOMBRE DE GRUPO
+// ======================================================
+
+
+function normalizeGroupName(
+  group
+) {
+
+  const value =
+    String(
+      group || ""
+    )
+    .trim();
+
+
+  if (!value) {
+
+    return "General";
+
+  }
+
+
+  const clean =
+    value
+      .replace(
+        /^grupo\s+/i,
+        ""
+      )
+      .trim();
+
+
+  return (
+    "Grupo " +
+    clean.toUpperCase()
+  );
+
+}
+
+
+// ======================================================
+// OBTENER GRUPO DE UN PARTIDO
+// ======================================================
+
+
+function getMatchGroup(
+  match
+) {
+
+  const homeGroup =
+    match.home_team
+      ?.group_name;
+
+
+  const awayGroup =
+    match.away_team
+      ?.group_name;
+
+
+  return normalizeGroupName(
+
+    match.group_name ||
+
+    homeGroup ||
+
+    awayGroup ||
+
+    "General"
+
+  );
+
+}
+
+
+// ======================================================
+// CALCULAR POSICIONES POR GRUPO
+// ======================================================
+
+
+function calculateStandingsByGroup() {
+
+  const groups =
+    {};
+
+
+  const sportList =
+    sportMatches();
+
+
+  // --------------------------------------
+  // PRIMERO CREAMOS TODOS LOS EQUIPOS
+  // Aunque todavía tengan 0 partidos.
+  // --------------------------------------
+
+  sportList.forEach(
+    match => {
+
+      const group =
+        getMatchGroup(
+          match
+        );
+
+
+      if (
+        !groups[group]
+      ) {
+
+        groups[group] =
+          {};
+
+      }
+
+
+      const homeName =
+        teamName(
+          match.home_team
+        );
+
+
+      const awayName =
+        teamName(
+          match.away_team
+        );
+
+
+      if (
+        !groups[group][
+          homeName
+        ]
+      ) {
+
+        groups[group][
+          homeName
+        ] =
+          newTeamTable(
+            homeName
+          );
+
+      }
+
+
+      if (
+        !groups[group][
+          awayName
+        ]
+      ) {
+
+        groups[group][
+          awayName
+        ] =
+          newTeamTable(
+            awayName
+          );
+
+      }
+
+    }
+  );
+
+
+  // --------------------------------------
+  // AHORA SUMAMOS SOLO LOS FINALIZADOS
+  // --------------------------------------
+
+  sportList
+
+    .filter(
+      match =>
+        match.status ===
+        "finished"
+    )
+
+    .forEach(
+      match => {
+
+        const group =
+          getMatchGroup(
+            match
+          );
+
+
+        if (
+          !groups[group]
+        ) {
+
+          groups[group] =
+            {};
+
+        }
+
+
+        const home =
+          teamName(
+            match.home_team
+          );
+
+
+        const away =
+          teamName(
+            match.away_team
+          );
+
+
+        if (
+          !groups[group][home]
+        ) {
+
+          groups[group][home] =
+            newTeamTable(
+              home
+            );
+
+        }
+
+
+        if (
+          !groups[group][away]
+        ) {
+
+          groups[group][away] =
+            newTeamTable(
+              away
+            );
+
+        }
+
+
+        const h =
+          Number(
+
+            match.sport ===
+            "padel"
+
+              ? padelHomeGames(
+                  match
+                )
+
+              : match.home_score ||
+                0
+
+          );
+
+
+        const a =
+          Number(
+
+            match.sport ===
+            "padel"
+
+              ? padelAwayGames(
+                  match
+                )
+
+              : match.away_score ||
+                0
+
+          );
+
+
+        const homeTeam =
+          groups[group][home];
+
+
+        const awayTeam =
+          groups[group][away];
+
+
+        homeTeam.pj++;
+
+        awayTeam.pj++;
+
+
+        homeTeam.gf +=
+          h;
+
+        homeTeam.gc +=
+          a;
+
+
+        awayTeam.gf +=
+          a;
+
+        awayTeam.gc +=
+          h;
+
+
+        if (
+          h > a
+        ) {
+
+          homeTeam.pg++;
+
+          homeTeam.pts +=
+            3;
+
+
+          awayTeam.pp++;
+
+        }
+
+        else if (
+          a > h
+        ) {
+
+          awayTeam.pg++;
+
+          awayTeam.pts +=
+            3;
+
+
+          homeTeam.pp++;
+
+        }
+
+        else {
+
+          homeTeam.pe++;
+
+          awayTeam.pe++;
+
+
+          homeTeam.pts++;
+
+          awayTeam.pts++;
+
+        }
+
+      }
+    );
+
+
+  // --------------------------------------
+  // CONVERTIR Y ORDENAR CADA GRUPO
+  // --------------------------------------
+
+  const result =
+    {};
+
+
+  Object
+    .entries(
+      groups
+    )
+    .forEach(
+      ([
+        group,
+        teams
+      ]) => {
+
+        result[group] =
+          Object
+
+            .values(
+              teams
+            )
+
+            .map(
+              team => {
+
+                team.dg =
+                  team.gf -
+                  team.gc;
+
+
+                return team;
+
+              }
+            )
+
+            .sort(
+              (
+                a,
+                b
+              ) =>
+
+                b.pts -
+                a.pts
+
+                ||
+
+                b.dg -
+                a.dg
+
+                ||
+
+                b.gf -
+                a.gf
+
+                ||
+
+                a.name
+                  .localeCompare(
+                    b.name,
+                    "es"
+                  )
+
+            );
+
+      }
+    );
+
+
+  return result;
+
+}
+
+
+// ======================================================
+// RENDER DE POSICIONES POR GRUPO
+// ======================================================
+
+
+function renderStandings() {
+
+  const section =
+    document.getElementById(
+      "standings"
+    );
+
+
+  if (!section) {
+
+    return;
+
+  }
+
+
+  let container =
+    document.getElementById(
+      "standingsGroups"
+    );
+
+
+  // La primera vez reemplazamos
+  // la tabla original.
+
+  if (!container) {
+
+    const originalCard =
+      section.querySelector(
+        ".standings-card"
+      );
+
+
+    if (!originalCard) {
+
+      return;
+
+    }
+
+
+    container =
+      document.createElement(
+        "div"
+      );
+
+
+    container.id =
+      "standingsGroups";
+
+
+    container.className =
+      "standings-groups";
+
+
+    originalCard.replaceWith(
+      container
+    );
+
+  }
+
+
+  const groups =
+    calculateStandingsByGroup();
+
+
+  const groupNames =
+    Object
+      .keys(
+        groups
+      )
+      .sort(
+        (
+          a,
+          b
+        ) => {
+
+          if (
+            a === "General"
+          ) {
+
+            return 1;
+
+          }
+
+
+          if (
+            b === "General"
+          ) {
+
+            return -1;
+
+          }
+
+
+          return a.localeCompare(
+            b,
+            "es"
+          );
+
+        }
+      );
+
+
+  if (
+    !groupNames.length
+  ) {
+
+    container.innerHTML = `
+
+      <div class="empty-state">
+
+        <strong>
+          Todavía no hay equipos
+        </strong>
+
+      </div>
+
+    `;
+
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    groupNames
+
+      .map(
+        groupName => {
+
+          const table =
+            groups[
+              groupName
+            ];
+
+
+          return `
+
+            <section class="
+              standings-group
+            ">
+
+
+              <div class="
+                standings-group-title
+              ">
+
+                ${groupName}
+
+              </div>
+
+
+              <div class="
+                standings-card
+              ">
+
+
+                <table>
+
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        #
+                      </th>
+
+                      <th>
+                        Equipo
+                      </th>
+
+                      <th>
+                        PJ
+                      </th>
+
+                      <th>
+                        PG
+                      </th>
+
+                      <th>
+                        PE
+                      </th>
+
+                      <th>
+                        PP
+                      </th>
+
+                      <th>
+                        DG
+                      </th>
+
+                      <th>
+                        PTS
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+
+                  <tbody>
+
+                    ${
+
+                      table
+                        .map(
+                          (
+                            team,
+                            index
+                          ) => `
+
+                            <tr>
+
+
+                              <td>
+
+                                ${index + 1}
+
+                              </td>
+
+
+                              <td>
+
+                                <strong>
+
+                                  ${team.name}
+
+                                </strong>
+
+                              </td>
+
+
+                              <td>
+
+                                ${team.pj}
+
+                              </td>
+
+
+                              <td>
+
+                                ${team.pg}
+
+                              </td>
+
+
+                              <td>
+
+                                ${team.pe}
+
+                              </td>
+
+
+                              <td>
+
+                                ${team.pp}
+
+                              </td>
+
+
+                              <td>
+
+                                ${
+
+                                  team.dg >
+                                  0
+
+                                    ? "+"
+
+                                    : ""
+
+                                }
+
+                                ${team.dg}
+
+                              </td>
+
+
+                              <td>
+
+                                <strong>
+
+                                  ${team.pts}
+
+                                </strong>
+
+                              </td>
+
+
+                            </tr>
+
+                          `
+                        )
+                        .join("")
+
+                    }
+
+                  </tbody>
+
+
+                </table>
+
+
+              </div>
+
+
+            </section>
+
+          `;
+
+        }
+      )
+
+      .join("");
+
+
+  // CSS agregado automáticamente
+  // para no tocar styles.css.
+
+  if (
+    !document.getElementById(
+      "standingsGroupStyles"
+    )
+  ) {
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+
+    style.id =
+      "standingsGroupStyles";
+
+
+    style.textContent = `
+
+      .standings-groups {
+
+        display:
+          grid;
+
+        gap:
+          30px;
+
+      }
+
+
+      .standings-group {
+
+        min-width:
+          0;
+
+      }
+
+
+      .standings-group-title {
+
+        margin-bottom:
+          10px;
+
+        color:
+          var(--navy);
+
+        font-family:
+          "League Spartan",
+          sans-serif;
+
+        font-size:
+          20px;
+
+        font-weight:
+          900;
+
+        letter-spacing:
+          .5px;
+
+        text-transform:
+          uppercase;
+
+      }
+
+
+      .standings-group
+      .standings-card {
+
+        width:
+          100%;
+
+        background:
+          #ffffff;
+
+      }
+
+
+      @media (
+        max-width: 540px
+      ) {
+
+        .standings-groups {
+
+          gap:
+            24px;
+
+        }
+
+
+        .standings-group-title {
+
+          font-size:
+            18px;
+
+        }
+
+      }
+
+    `;
+
+
+    document.head.appendChild(
+      style
+    );
+
+  }
+
+}
