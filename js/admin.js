@@ -1,8 +1,8 @@
 // ======================================================
 // COPA RAÍCES - ADMIN
 // SIN INICIO DE SESIÓN
+// FÚTBOL + PÁDEL (1 SET / PUNTO DE ORO)
 // ======================================================
-
 
 let adminTeams = [];
 let adminMatches = [];
@@ -11,12 +11,12 @@ let adminEvents = [];
 let selectedMatchId = null;
 
 let clockInterval = null;
+let adminRealtimeChannel = null;
 
 
 // ======================================================
 // INICIO
 // ======================================================
-
 
 document.addEventListener(
   "DOMContentLoaded",
@@ -36,13 +36,92 @@ async function initAdmin() {
 
   await loadEverything();
 
+  setupAdminRealtime();
+
+}
+
+
+// ======================================================
+// REALTIME ADMIN
+// ======================================================
+
+function setupAdminRealtime() {
+
+  if (
+    typeof supabaseClient === "undefined" ||
+    adminRealtimeChannel
+  ) {
+
+    return;
+
+  }
+
+
+  const reload =
+    async () => {
+
+      await loadEverything();
+
+    };
+
+
+  adminRealtimeChannel =
+    supabaseClient
+
+      .channel(
+        "copa-raices-admin"
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event: "*",
+          schema: "public",
+          table: "matches"
+        },
+
+        reload
+
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event: "*",
+          schema: "public",
+          table: "match_events"
+        },
+
+        reload
+
+      )
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event: "*",
+          schema: "public",
+          table: "teams"
+        },
+
+        reload
+
+      )
+
+      .subscribe();
+
 }
 
 
 // ======================================================
 // NAVEGACIÓN
 // ======================================================
-
 
 function setupNavigation() {
 
@@ -68,7 +147,9 @@ function setupNavigation() {
 }
 
 
-function openAdminSection(section) {
+function openAdminSection(
+  section
+) {
 
   document
     .querySelectorAll(
@@ -128,7 +209,6 @@ function openAdminSection(section) {
 // CARGAR TODO
 // ======================================================
 
-
 async function loadEverything() {
 
   await loadTeams();
@@ -146,7 +226,6 @@ async function loadEverything() {
 // EQUIPOS
 // ======================================================
 
-
 async function loadTeams() {
 
   const {
@@ -154,12 +233,20 @@ async function loadTeams() {
     error
   } =
     await supabaseClient
-      .from("teams")
-      .select("*")
+
+      .from(
+        "teams"
+      )
+
+      .select(
+        "*"
+      )
+
       .order(
         "name",
         {
-          ascending: true
+          ascending:
+            true
         }
       );
 
@@ -186,7 +273,6 @@ async function loadTeams() {
 // PARTIDOS
 // ======================================================
 
-
 async function loadMatches() {
 
   const {
@@ -194,20 +280,34 @@ async function loadMatches() {
     error
   } =
     await supabaseClient
-      .from("matches")
-      .select("*")
+
+      .from(
+        "matches"
+      )
+
+      .select(
+        "*"
+      )
+
       .order(
         "match_date",
         {
-          ascending: true,
-          nullsFirst: false
+          ascending:
+            true,
+
+          nullsFirst:
+            false
         }
       )
+
       .order(
         "start_time",
         {
-          ascending: true,
-          nullsFirst: false
+          ascending:
+            true,
+
+          nullsFirst:
+            false
         }
       );
 
@@ -241,6 +341,7 @@ async function loadMatches() {
 
   if (
     selectedMatchId &&
+
     !adminMatches.some(
       match =>
         Number(match.id) ===
@@ -261,7 +362,6 @@ async function loadMatches() {
 // EVENTOS
 // ======================================================
 
-
 async function loadEvents() {
 
   const {
@@ -269,12 +369,20 @@ async function loadEvents() {
     error
   } =
     await supabaseClient
-      .from("match_events")
-      .select("*")
+
+      .from(
+        "match_events"
+      )
+
+      .select(
+        "*"
+      )
+
       .order(
         "created_at",
         {
-          ascending: true
+          ascending:
+            true
         }
       );
 
@@ -301,8 +409,9 @@ async function loadEvents() {
 // HELPERS
 // ======================================================
 
-
-function getTeam(id) {
+function getTeam(
+  id
+) {
 
   return adminTeams.find(
     team =>
@@ -313,10 +422,14 @@ function getTeam(id) {
 }
 
 
-function teamName(id) {
+function teamName(
+  id
+) {
 
-  return getTeam(id)?.name ||
-    "Equipo";
+  return (
+    getTeam(id)?.name ||
+    "Equipo"
+  );
 
 }
 
@@ -332,7 +445,9 @@ function currentMatch() {
 }
 
 
-function formatClock(seconds) {
+function formatClock(
+  seconds
+) {
 
   const mins =
     Math.floor(
@@ -345,17 +460,35 @@ function formatClock(seconds) {
 
 
   return (
-    String(mins).padStart(2, "0")
+
+    String(
+      mins
+    ).padStart(
+      2,
+      "0"
+    )
+
     +
+
     ":"
+
     +
-    String(secs).padStart(2, "0")
+
+    String(
+      secs
+    ).padStart(
+      2,
+      "0"
+    )
+
   );
 
 }
 
 
-function getLiveSeconds(match) {
+function getLiveSeconds(
+  match
+) {
 
   if (!match) {
 
@@ -388,11 +521,14 @@ function getLiveSeconds(match) {
 
     total +=
       Math.max(
+
         0,
+
         Math.floor(
           (now - start) /
           1000
         )
+
       );
 
   }
@@ -403,7 +539,9 @@ function getLiveSeconds(match) {
 }
 
 
-function eventIcon(type) {
+function eventIcon(
+  type
+) {
 
   switch (type) {
 
@@ -416,9 +554,6 @@ function eventIcon(type) {
     case "red":
       return "🟥";
 
-    case "point":
-      return "🎾";
-
     default:
       return "•";
 
@@ -428,9 +563,93 @@ function eventIcon(type) {
 
 
 // ======================================================
-// RENDER GENERAL
+// HELPERS PÁDEL
 // ======================================================
 
+function padelPointText(
+  value
+) {
+
+  const points = [
+    "0",
+    "15",
+    "30",
+    "40"
+  ];
+
+
+  const index =
+    Math.max(
+
+      0,
+
+      Math.min(
+        3,
+        Number(
+          value || 0
+        )
+      )
+
+    );
+
+
+  return points[index];
+
+}
+
+
+function padelHomeGames(
+  match
+) {
+
+  return Number(
+
+    match.padel_home_games ??
+
+    match.home_score ??
+
+    0
+
+  );
+
+}
+
+
+function padelAwayGames(
+  match
+) {
+
+  return Number(
+
+    match.padel_away_games ??
+
+    match.away_score ??
+
+    0
+
+  );
+
+}
+
+
+function padelHistory(
+  match
+) {
+
+  return Array.isArray(
+    match.padel_history
+  )
+
+    ? match.padel_history
+
+    : [];
+
+}
+
+
+// ======================================================
+// RENDER GENERAL
+// ======================================================
 
 function renderAll() {
 
@@ -448,9 +667,8 @@ function renderAll() {
 
 
 // ======================================================
-// SELECTOR DE PARTIDO
+// SELECTOR PARTIDO
 // ======================================================
-
 
 function renderMatchSelector() {
 
@@ -483,11 +701,13 @@ function renderMatchSelector() {
   const filtered =
     adminMatches.filter(
       match =>
-        match.sport === sport
+        match.sport ===
+        sport
     );
 
 
-  select.innerHTML = "";
+  select.innerHTML =
+    "";
 
 
   if (!filtered.length) {
@@ -536,52 +756,56 @@ function renderMatchSelector() {
   }
 
 
-  filtered.forEach(match => {
+  filtered.forEach(
+    match => {
 
-    const option =
-      document.createElement(
-        "option"
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
+        match.id;
+
+
+      const time =
+        match.start_time
+          ?.slice(
+            0,
+            5
+          ) ||
+        "--:--";
+
+
+      option.textContent =
+        `${time} · ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`;
+
+
+      if (
+        Number(match.id) ===
+        Number(selectedMatchId)
+      ) {
+
+        option.selected =
+          true;
+
+      }
+
+
+      select.appendChild(
+        option
       );
 
-
-    option.value =
-      match.id;
-
-
-    const time =
-      match.start_time
-        ?.slice(0, 5) ||
-      "--:--";
-
-
-    option.textContent =
-      `${time} · ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`;
-
-
-    if (
-      Number(match.id) ===
-      Number(selectedMatchId)
-    ) {
-
-      option.selected =
-        true;
-
     }
-
-
-    select.appendChild(
-      option
-    );
-
-  });
+  );
 
 }
 
 
 // ======================================================
-// PANEL DE CONTROL
+// CONTROL
 // ======================================================
-
 
 function renderControl() {
 
@@ -641,29 +865,23 @@ function renderControl() {
 
   document
     .getElementById(
-      "adminHomeScore"
-    )
-    .textContent =
-      match.home_score || 0;
-
-
-  document
-    .getElementById(
-      "adminAwayScore"
-    )
-    .textContent =
-      match.away_score || 0;
-
-
-  document
-    .getElementById(
       "adminMatchCourt"
     )
     .textContent =
-      `${match.court || "Sin cancha"}${match.group_name ? " · " + match.group_name : ""}`;
+
+      `${match.court || "Sin cancha"}${
+        match.group_name
+          ? " · " + match.group_name
+          : ""
+      }`;
 
 
   renderStatus(
+    match
+  );
+
+
+  renderSportScoreboard(
     match
   );
 
@@ -688,6 +906,11 @@ function renderControl() {
   );
 
 
+  toggleSportSpecificAdmin(
+    match
+  );
+
+
   updateClockDisplay(
     match
   );
@@ -705,11 +928,441 @@ function renderControl() {
 
 
 // ======================================================
+// MARCADOR SEGÚN DEPORTE
+// ======================================================
+
+function renderSportScoreboard(
+  match
+) {
+
+  const homeScore =
+    document.getElementById(
+      "adminHomeScore"
+    );
+
+
+  const awayScore =
+    document.getElementById(
+      "adminAwayScore"
+    );
+
+
+  const homeMinus =
+    document.getElementById(
+      "homeMinus"
+    );
+
+
+  const awayMinus =
+    document.getElementById(
+      "awayMinus"
+    );
+
+
+  const homePlus =
+    document.getElementById(
+      "homePlus"
+    );
+
+
+  const awayPlus =
+    document.getElementById(
+      "awayPlus"
+    );
+
+
+  if (
+    match.sport ===
+    "padel"
+  ) {
+
+    homeScore.textContent =
+      padelHomeGames(
+        match
+      );
+
+
+    awayScore.textContent =
+      padelAwayGames(
+        match
+      );
+
+
+    homeMinus.style.display =
+      "none";
+
+
+    awayMinus.style.display =
+      "none";
+
+
+    homePlus.textContent =
+      "+ Punto";
+
+
+    awayPlus.textContent =
+      "+ Punto";
+
+
+    ensurePadelPanel();
+
+    renderPadelPanel(
+      match
+    );
+
+  }
+
+  else {
+
+    homeScore.textContent =
+      Number(
+        match.home_score ||
+        0
+      );
+
+
+    awayScore.textContent =
+      Number(
+        match.away_score ||
+        0
+      );
+
+
+    homeMinus.style.display =
+      "inline-flex";
+
+
+    awayMinus.style.display =
+      "inline-flex";
+
+
+    homePlus.textContent =
+      "+";
+
+
+    awayPlus.textContent =
+      "+";
+
+
+    const padelPanel =
+      document.getElementById(
+        "padelAdminPanel"
+      );
+
+
+    if (padelPanel) {
+
+      padelPanel.style.display =
+        "none";
+
+    }
+
+  }
+
+}
+
+
+// ======================================================
+// PANEL PÁDEL
+// ======================================================
+
+function ensurePadelPanel() {
+
+  if (
+    document.getElementById(
+      "padelAdminPanel"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  const scoreboard =
+    document.querySelector(
+      ".admin-scoreboard"
+    );
+
+
+  if (!scoreboard) {
+
+    return;
+
+  }
+
+
+  const panel =
+    document.createElement(
+      "div"
+    );
+
+
+  panel.id =
+    "padelAdminPanel";
+
+
+  panel.className =
+    "admin-padel-panel";
+
+
+  panel.innerHTML = `
+
+    <div class="admin-padel-status">
+
+      <span class="admin-team-label">
+        PUNTOS
+      </span>
+
+      <div class="admin-padel-points">
+
+        <strong id="padelHomePointText">
+          0
+        </strong>
+
+        <span>
+          -
+        </span>
+
+        <strong id="padelAwayPointText">
+          0
+        </strong>
+
+      </div>
+
+      <div
+        id="padelSpecialState"
+        class="admin-padel-special"
+      >
+      </div>
+
+    </div>
+
+
+    <div class="
+      admin-button-row
+      admin-padel-actions
+    ">
+
+      <button
+        id="undoPadelPoint"
+        class="admin-secondary-button"
+      >
+        ↶ Deshacer último punto
+      </button>
+
+
+      <button
+        id="resetPadelScore"
+        class="
+          admin-secondary-button
+          danger
+        "
+      >
+        Reiniciar marcador
+      </button>
+
+    </div>
+
+  `;
+
+
+  scoreboard
+    .insertAdjacentElement(
+      "afterend",
+      panel
+    );
+
+
+  document
+    .getElementById(
+      "undoPadelPoint"
+    )
+    .addEventListener(
+      "click",
+      undoPadelPoint
+    );
+
+
+  document
+    .getElementById(
+      "resetPadelScore"
+    )
+    .addEventListener(
+      "click",
+      resetPadelScore
+    );
+
+}
+
+
+function renderPadelPanel(
+  match
+) {
+
+  const panel =
+    document.getElementById(
+      "padelAdminPanel"
+    );
+
+
+  if (!panel) {
+
+    return;
+
+  }
+
+
+  panel.style.display =
+    "block";
+
+
+  const homePointText =
+    document.getElementById(
+      "padelHomePointText"
+    );
+
+
+  const awayPointText =
+    document.getElementById(
+      "padelAwayPointText"
+    );
+
+
+  const special =
+    document.getElementById(
+      "padelSpecialState"
+    );
+
+
+  if (
+    match.padel_tiebreak
+  ) {
+
+    homePointText.textContent =
+      Number(
+        match.padel_home_tiebreak ||
+        0
+      );
+
+
+    awayPointText.textContent =
+      Number(
+        match.padel_away_tiebreak ||
+        0
+      );
+
+
+    special.textContent =
+      "TIE-BREAK";
+
+
+    special.style.display =
+      "block";
+
+
+    return;
+
+  }
+
+
+  const homePoints =
+    Number(
+      match.padel_home_points ||
+      0
+    );
+
+
+  const awayPoints =
+    Number(
+      match.padel_away_points ||
+      0
+    );
+
+
+  homePointText.textContent =
+    padelPointText(
+      homePoints
+    );
+
+
+  awayPointText.textContent =
+    padelPointText(
+      awayPoints
+    );
+
+
+  if (
+    homePoints === 3 &&
+    awayPoints === 3
+  ) {
+
+    special.textContent =
+      "PUNTO DE ORO";
+
+
+    special.style.display =
+      "block";
+
+  }
+
+  else {
+
+    special.textContent =
+      "";
+
+
+    special.style.display =
+      "none";
+
+  }
+
+}
+
+
+// ======================================================
+// OCULTAR EVENTOS EN PÁDEL
+// ======================================================
+
+function toggleSportSpecificAdmin(
+  match
+) {
+
+  const eventButton =
+    document.getElementById(
+      "addEventButton"
+    );
+
+
+  const eventsBlock =
+    eventButton?.closest(
+      ".admin-edit-block"
+    );
+
+
+  if (eventsBlock) {
+
+    eventsBlock.style.display =
+
+      match.sport ===
+      "padel"
+
+        ? "none"
+
+        : "block";
+
+  }
+
+}
+
+
+// ======================================================
 // ESTADO
 // ======================================================
 
-
-function renderStatus(match) {
+function renderStatus(
+  match
+) {
 
   const badge =
     document.getElementById(
@@ -772,8 +1425,9 @@ function renderStatus(match) {
 // RELOJ
 // ======================================================
 
-
-function updateClockDisplay(match) {
+function updateClockDisplay(
+  match
+) {
 
   const seconds =
     getLiveSeconds(
@@ -826,6 +1480,7 @@ function startClockInterval() {
 
   clockInterval =
     setInterval(
+
       () => {
 
         const match =
@@ -841,7 +1496,9 @@ function startClockInterval() {
         }
 
       },
+
       1000
+
     );
 
 }
@@ -849,7 +1506,9 @@ function startClockInterval() {
 
 function stopClockInterval() {
 
-  if (clockInterval) {
+  if (
+    clockInterval
+  ) {
 
     clearInterval(
       clockInterval
@@ -868,8 +1527,9 @@ function stopClockInterval() {
 // PERÍODOS
 // ======================================================
 
-
-function renderPeriodButtons(match) {
+function renderPeriodButtons(
+  match
+) {
 
   const container =
     document.getElementById(
@@ -885,75 +1545,73 @@ function renderPeriodButtons(match) {
 
 
   const periods =
+
     match.sport ===
-      "padel"
+    "padel"
 
-      ?
+      ? [
+          "SET ÚNICO"
+        ]
 
-      [
-        "SET 1",
-        "SET 2",
-        "SET 3"
-      ]
-
-      :
-
-      [
-        "1T",
-        "ENTRETIEMPO",
-        "2T"
-      ];
+      : [
+          "1T",
+          "ENTRETIEMPO",
+          "2T"
+        ];
 
 
   container.innerHTML =
     "";
 
 
-  periods.forEach(period => {
+  periods.forEach(
+    period => {
 
-    const button =
-      document.createElement(
-        "button"
+      const button =
+        document.createElement(
+          "button"
+        );
+
+
+      button.className =
+        "admin-period-button";
+
+
+      if (
+        match.period ===
+        period
+      ) {
+
+        button.classList.add(
+          "active"
+        );
+
+      }
+
+
+      button.textContent =
+        period;
+
+
+      button.addEventListener(
+        "click",
+
+        async () => {
+
+          await updateMatch({
+            period
+          });
+
+        }
       );
 
 
-    button.className =
-      "admin-period-button";
-
-
-    if (
-      match.period ===
-      period
-    ) {
-
-      button.classList.add(
-        "active"
+      container.appendChild(
+        button
       );
 
     }
-
-
-    button.textContent =
-      period;
-
-
-    button.addEventListener(
-      "click",
-      async () => {
-
-        await updateMatch({
-          period
-        });
-
-      }
-    );
-
-
-    container.appendChild(
-      button
-    );
-
-  });
+  );
 
 }
 
@@ -962,8 +1620,9 @@ function renderPeriodButtons(match) {
 // FORMULARIO PARTIDO
 // ======================================================
 
-
-function fillMatchForm(match) {
+function fillMatchForm(
+  match
+) {
 
   fillTeamSelect(
     "editHomeTeam",
@@ -984,7 +1643,8 @@ function fillMatchForm(match) {
       "editCourt"
     )
     .value =
-      match.court || "";
+      match.court ||
+      "";
 
 
   document
@@ -992,7 +1652,8 @@ function fillMatchForm(match) {
       "editGroup"
     )
     .value =
-      match.group_name || "";
+      match.group_name ||
+      "";
 
 
   document
@@ -1000,7 +1661,8 @@ function fillMatchForm(match) {
       "editRound"
     )
     .value =
-      match.round_name || "";
+      match.round_name ||
+      "";
 
 
   document
@@ -1008,7 +1670,8 @@ function fillMatchForm(match) {
       "editDate"
     )
     .value =
-      match.match_date || "";
+      match.match_date ||
+      "";
 
 
   document
@@ -1016,17 +1679,21 @@ function fillMatchForm(match) {
       "editTime"
     )
     .value =
+
       match.start_time
-        ?.slice(0, 5) ||
+        ?.slice(
+          0,
+          5
+        ) ||
+
       "";
 
 }
 
 
 // ======================================================
-// SELECTORES DE EQUIPO
+// SELECT EQUIPOS
 // ======================================================
-
 
 function fillTeamSelect(
   elementId,
@@ -1085,48 +1752,47 @@ function fillTeamSelect(
   }
 
 
-  filtered.forEach(team => {
+  filtered.forEach(
+    team => {
 
-    const option =
-      document.createElement(
-        "option"
+      const option =
+        document.createElement(
+          "option"
+        );
+
+
+      option.value =
+        team.id;
+
+
+      option.textContent =
+        team.name;
+
+
+      if (
+        Number(team.id) ===
+        Number(selectedId)
+      ) {
+
+        option.selected =
+          true;
+
+      }
+
+
+      select.appendChild(
+        option
       );
 
-
-    option.value =
-      team.id;
-
-
-    option.textContent =
-      team.name;
-
-
-    if (
-      Number(team.id) ===
-      Number(selectedId)
-    ) {
-
-      option.selected =
-        true;
-
     }
-
-
-    select.appendChild(
-      option
-    );
-
-  });
+  );
 
 }
 
 
-// ======================================================
-// EQUIPOS PARA EVENTOS
-// ======================================================
-
-
-function fillEventTeams(match) {
+function fillEventTeams(
+  match
+) {
 
   const select =
     document.getElementById(
@@ -1149,35 +1815,39 @@ function fillEventTeams(match) {
     match.home_team_id,
     match.away_team_id
   ]
-  .forEach(id => {
 
-    const option =
-      document.createElement(
-        "option"
-      );
+    .forEach(
+      id => {
 
-
-    option.value =
-      id;
+        const option =
+          document.createElement(
+            "option"
+          );
 
 
-    option.textContent =
-      teamName(id);
+        option.value =
+          id;
 
 
-    select.appendChild(
-      option
+        option.textContent =
+          teamName(
+            id
+          );
+
+
+        select.appendChild(
+          option
+        );
+
+      }
     );
-
-  });
 
 }
 
 
 // ======================================================
-// EVENTOS DE CONTROLES
+// CONTROLES
 // ======================================================
-
 
 function setupControlEvents() {
 
@@ -1191,6 +1861,7 @@ function setupControlEvents() {
 
     controlSport.addEventListener(
       "change",
+
       () => {
 
         selectedMatchId =
@@ -1217,6 +1888,7 @@ function setupControlEvents() {
 
     matchSelector.addEventListener(
       "change",
+
       event => {
 
         selectedMatchId =
@@ -1261,124 +1933,81 @@ function setupControlEvents() {
   );
 
 
-  const start =
-    document.getElementById(
+  document
+    .getElementById(
       "startClock"
-    );
-
-
-  if (start) {
-
-    start.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       startClock
     );
 
-  }
 
-
-  const pause =
-    document.getElementById(
+  document
+    .getElementById(
       "pauseClock"
-    );
-
-
-  if (pause) {
-
-    pause.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       pauseClock
     );
 
-  }
 
-
-  const reset =
-    document.getElementById(
+  document
+    .getElementById(
       "resetClock"
-    );
-
-
-  if (reset) {
-
-    reset.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       resetClock
     );
 
-  }
 
-
-  const save =
-    document.getElementById(
+  document
+    .getElementById(
       "saveMatchInfo"
-    );
-
-
-  if (save) {
-
-    save.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       saveMatchInfo
     );
 
-  }
 
-
-  const addEvent =
-    document.getElementById(
+  document
+    .getElementById(
       "addEventButton"
-    );
-
-
-  if (addEvent) {
-
-    addEvent.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       createEvent
     );
 
-  }
 
-
-  const finish =
-    document.getElementById(
+  document
+    .getElementById(
       "finishMatchButton"
-    );
-
-
-  if (finish) {
-
-    finish.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       finishMatch
     );
 
-  }
 
-
-  const reopen =
-    document.getElementById(
+  document
+    .getElementById(
       "reopenMatchButton"
-    );
-
-
-  if (reopen) {
-
-    reopen.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       reopenMatch
     );
-
-  }
 
 }
 
 
 // ======================================================
-// MARCADOR
+// BOTONES MARCADOR
 // ======================================================
-
 
 function scoreButton(
   id,
@@ -1400,7 +2029,9 @@ function scoreButton(
 
 
   button.addEventListener(
+
     "click",
+
     async () => {
 
       const match =
@@ -1414,8 +2045,31 @@ function scoreButton(
       }
 
 
+      if (
+        match.sport ===
+        "padel"
+      ) {
+
+        if (
+          amount > 0
+        ) {
+
+          await addPadelPoint(
+            side
+          );
+
+        }
+
+
+        return;
+
+      }
+
+
       const field =
-        side === "home"
+
+        side ===
+        "home"
 
           ? "home_score"
 
@@ -1431,17 +2085,21 @@ function scoreButton(
             match[field] ||
             0
           )
+
           +
+
           amount
 
         );
 
 
       await updateMatch({
-        [field]: value
+        [field]:
+          value
       });
 
     }
+
   );
 
 }
@@ -1450,7 +2108,6 @@ function scoreButton(
 // ======================================================
 // ACTUALIZAR PARTIDO
 // ======================================================
-
 
 async function updateMatch(
   changes
@@ -1471,10 +2128,15 @@ async function updateMatch(
     error
   } =
     await supabaseClient
-      .from("matches")
+
+      .from(
+        "matches"
+      )
+
       .update(
         changes
       )
+
       .eq(
         "id",
         match.id
@@ -1507,17 +2169,24 @@ async function updateMatch(
 
 
 // ======================================================
-// INICIAR RELOJ
+// PÁDEL
+// 1 SET + PUNTO DE ORO
+// TIE-BREAK EN 6-6
 // ======================================================
 
-
-async function startClock() {
+async function addPadelPoint(
+  side
+) {
 
   const match =
     currentMatch();
 
 
-  if (!match) {
+  if (
+    !match ||
+    match.sport !==
+    "padel"
+  ) {
 
     return;
 
@@ -1525,6 +2194,695 @@ async function startClock() {
 
 
   if (
+    match.status ===
+    "finished"
+  ) {
+
+    alert(
+      "El partido ya está finalizado."
+    );
+
+    return;
+
+  }
+
+
+  const history =
+    padelHistory(
+      match
+    );
+
+
+  const snapshot = {
+
+    padel_home_games:
+      padelHomeGames(
+        match
+      ),
+
+    padel_away_games:
+      padelAwayGames(
+        match
+      ),
+
+    padel_home_points:
+      Number(
+        match.padel_home_points ||
+        0
+      ),
+
+    padel_away_points:
+      Number(
+        match.padel_away_points ||
+        0
+      ),
+
+    padel_tiebreak:
+      Boolean(
+        match.padel_tiebreak
+      ),
+
+    padel_home_tiebreak:
+      Number(
+        match.padel_home_tiebreak ||
+        0
+      ),
+
+    padel_away_tiebreak:
+      Number(
+        match.padel_away_tiebreak ||
+        0
+      ),
+
+    home_score:
+      Number(
+        match.home_score ||
+        0
+      ),
+
+    away_score:
+      Number(
+        match.away_score ||
+        0
+      ),
+
+    status:
+      match.status,
+
+    period:
+      match.period,
+
+    elapsed_seconds:
+      Number(
+        match.elapsed_seconds ||
+        0
+      ),
+
+    clock_running:
+      Boolean(
+        match.clock_running
+      ),
+
+    clock_started_at:
+      match.clock_started_at
+
+  };
+
+
+  const nextHistory = [
+    ...history,
+    snapshot
+  ];
+
+
+  let homeGames =
+    padelHomeGames(
+      match
+    );
+
+
+  let awayGames =
+    padelAwayGames(
+      match
+    );
+
+
+  let homePoints =
+    Number(
+      match.padel_home_points ||
+      0
+    );
+
+
+  let awayPoints =
+    Number(
+      match.padel_away_points ||
+      0
+    );
+
+
+  let homeTie =
+    Number(
+      match.padel_home_tiebreak ||
+      0
+    );
+
+
+  let awayTie =
+    Number(
+      match.padel_away_tiebreak ||
+      0
+    );
+
+
+  let tiebreak =
+    Boolean(
+      match.padel_tiebreak
+    );
+
+
+  let finished =
+    false;
+
+
+  // =====================================
+  // TIE BREAK
+  // =====================================
+
+  if (tiebreak) {
+
+    if (
+      side ===
+      "home"
+    ) {
+
+      homeTie++;
+
+    }
+
+    else {
+
+      awayTie++;
+
+    }
+
+
+    const winnerReachedSeven =
+
+      Math.max(
+        homeTie,
+        awayTie
+      ) >= 7
+
+      &&
+
+      Math.abs(
+        homeTie -
+        awayTie
+      ) >= 2;
+
+
+    if (
+      winnerReachedSeven
+    ) {
+
+      if (
+        homeTie >
+        awayTie
+      ) {
+
+        homeGames =
+          7;
+
+        awayGames =
+          6;
+
+      }
+
+      else {
+
+        homeGames =
+          6;
+
+        awayGames =
+          7;
+
+      }
+
+
+      finished =
+        true;
+
+
+      tiebreak =
+        false;
+
+    }
+
+  }
+
+  // =====================================
+  // GAME NORMAL
+  // =====================================
+
+  else {
+
+    const scorerPoints =
+
+      side ===
+      "home"
+
+        ? homePoints
+
+        : awayPoints;
+
+
+    const opponentPoints =
+
+      side ===
+      "home"
+
+        ? awayPoints
+
+        : homePoints;
+
+
+    let gameWon =
+      false;
+
+
+    // 40-40:
+    // el siguiente punto gana directamente
+
+    if (
+      scorerPoints === 3 &&
+      opponentPoints === 3
+    ) {
+
+      gameWon =
+        true;
+
+    }
+
+    // 40-0 / 40-15 / 40-30
+
+    else if (
+      scorerPoints === 3 &&
+      opponentPoints < 3
+    ) {
+
+      gameWon =
+        true;
+
+    }
+
+    else {
+
+      if (
+        side ===
+        "home"
+      ) {
+
+        homePoints++;
+
+      }
+
+      else {
+
+        awayPoints++;
+
+      }
+
+    }
+
+
+    if (gameWon) {
+
+      if (
+        side ===
+        "home"
+      ) {
+
+        homeGames++;
+
+      }
+
+      else {
+
+        awayGames++;
+
+      }
+
+
+      homePoints =
+        0;
+
+
+      awayPoints =
+        0;
+
+
+      // 6-6 = tie break
+
+      if (
+        homeGames === 6 &&
+        awayGames === 6
+      ) {
+
+        tiebreak =
+          true;
+
+
+        homeTie =
+          0;
+
+
+        awayTie =
+          0;
+
+      }
+
+      else {
+
+        const gamesLeader =
+          Math.max(
+            homeGames,
+            awayGames
+          );
+
+
+        const gameDifference =
+          Math.abs(
+            homeGames -
+            awayGames
+          );
+
+
+        // 6-0, 6-1, 6-2, 6-3, 6-4
+        // o 7-5
+
+        if (
+          gamesLeader >= 6 &&
+          gameDifference >= 2
+        ) {
+
+          finished =
+            true;
+
+        }
+
+      }
+
+    }
+
+  }
+
+
+  const changes = {
+
+    padel_home_games:
+      homeGames,
+
+    padel_away_games:
+      awayGames,
+
+    padel_home_points:
+      homePoints,
+
+    padel_away_points:
+      awayPoints,
+
+    padel_tiebreak:
+      tiebreak,
+
+    padel_home_tiebreak:
+      homeTie,
+
+    padel_away_tiebreak:
+      awayTie,
+
+    padel_history:
+      nextHistory,
+
+    home_score:
+      homeGames,
+
+    away_score:
+      awayGames,
+
+    period:
+      "SET ÚNICO",
+
+    status:
+      finished
+        ? "finished"
+        : "live"
+
+  };
+
+
+  if (finished) {
+
+    changes.elapsed_seconds =
+      getLiveSeconds(
+        match
+      );
+
+
+    changes.clock_running =
+      false;
+
+
+    changes.clock_started_at =
+      null;
+
+  }
+
+
+  await updateMatch(
+    changes
+  );
+
+}
+
+
+// ======================================================
+// DESHACER PUNTO PÁDEL
+// ======================================================
+
+async function undoPadelPoint() {
+
+  const match =
+    currentMatch();
+
+
+  if (
+    !match ||
+    match.sport !==
+    "padel"
+  ) {
+
+    return;
+
+  }
+
+
+  const history =
+    padelHistory(
+      match
+    );
+
+
+  if (!history.length) {
+
+    alert(
+      "No hay puntos para deshacer."
+    );
+
+    return;
+
+  }
+
+
+  const previous =
+    history[
+      history.length - 1
+    ];
+
+
+  const nextHistory =
+    history.slice(
+      0,
+      -1
+    );
+
+
+  await updateMatch({
+
+    padel_home_games:
+      Number(
+        previous.padel_home_games ||
+        0
+      ),
+
+    padel_away_games:
+      Number(
+        previous.padel_away_games ||
+        0
+      ),
+
+    padel_home_points:
+      Number(
+        previous.padel_home_points ||
+        0
+      ),
+
+    padel_away_points:
+      Number(
+        previous.padel_away_points ||
+        0
+      ),
+
+    padel_tiebreak:
+      Boolean(
+        previous.padel_tiebreak
+      ),
+
+    padel_home_tiebreak:
+      Number(
+        previous.padel_home_tiebreak ||
+        0
+      ),
+
+    padel_away_tiebreak:
+      Number(
+        previous.padel_away_tiebreak ||
+        0
+      ),
+
+    padel_history:
+      nextHistory,
+
+    home_score:
+      Number(
+        previous.home_score ||
+        previous.padel_home_games ||
+        0
+      ),
+
+    away_score:
+      Number(
+        previous.away_score ||
+        previous.padel_away_games ||
+        0
+      ),
+
+    status:
+      previous.status ||
+      "live",
+
+    period:
+      previous.period ||
+      "SET ÚNICO",
+
+    elapsed_seconds:
+      Number(
+        previous.elapsed_seconds ||
+        0
+      ),
+
+    clock_running:
+      Boolean(
+        previous.clock_running
+      ),
+
+    clock_started_at:
+      previous.clock_started_at ||
+      null
+
+  });
+
+}
+
+
+// ======================================================
+// REINICIAR MARCADOR PÁDEL
+// ======================================================
+
+async function resetPadelScore() {
+
+  const match =
+    currentMatch();
+
+
+  if (
+    !match ||
+    match.sport !==
+    "padel"
+  ) {
+
+    return;
+
+  }
+
+
+  const confirmed =
+    confirm(
+      "¿Reiniciar completamente el marcador de pádel?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  await updateMatch({
+
+    padel_home_games:
+      0,
+
+    padel_away_games:
+      0,
+
+    padel_home_points:
+      0,
+
+    padel_away_points:
+      0,
+
+    padel_tiebreak:
+      false,
+
+    padel_home_tiebreak:
+      0,
+
+    padel_away_tiebreak:
+      0,
+
+    padel_history:
+      [],
+
+    home_score:
+      0,
+
+    away_score:
+      0,
+
+    status:
+      "pending",
+
+    period:
+      "SET ÚNICO",
+
+    elapsed_seconds:
+      0,
+
+    clock_running:
+      false,
+
+    clock_started_at:
+      null
+
+  });
+
+}
+
+
+// ======================================================
+// RELOJ ACCIONES
+// ======================================================
+
+async function startClock() {
+
+  const match =
+    currentMatch();
+
+
+  if (
+    !match ||
     match.clock_running
   ) {
 
@@ -1548,11 +2906,6 @@ async function startClock() {
   });
 
 }
-
-
-// ======================================================
-// PAUSAR RELOJ
-// ======================================================
 
 
 async function pauseClock() {
@@ -1590,11 +2943,6 @@ async function pauseClock() {
 }
 
 
-// ======================================================
-// REINICIAR RELOJ
-// ======================================================
-
-
 async function resetClock() {
 
   const confirmed =
@@ -1627,9 +2975,8 @@ async function resetClock() {
 
 
 // ======================================================
-// GUARDAR DATOS DEL PARTIDO
+// GUARDAR PARTIDO
 // ======================================================
-
 
 async function saveMatchInfo() {
 
@@ -1745,9 +3092,8 @@ async function saveMatchInfo() {
 
 
 // ======================================================
-// CREAR EVENTO
+// EVENTOS FÚTBOL
 // ======================================================
-
 
 async function createEvent() {
 
@@ -1755,7 +3101,11 @@ async function createEvent() {
     currentMatch();
 
 
-  if (!match) {
+  if (
+    !match ||
+    match.sport !==
+    "football"
+  ) {
 
     return;
 
@@ -1796,7 +3146,8 @@ async function createEvent() {
           "eventMinute"
         )
         .value
-    ) || 0;
+    ) ||
+    0;
 
 
   if (!teamId) {
@@ -1810,10 +3161,7 @@ async function createEvent() {
   }
 
 
-  if (
-    type !== "point" &&
-    !player
-  ) {
+  if (!player) {
 
     alert(
       "Ingresá el nombre del jugador."
@@ -1828,9 +3176,11 @@ async function createEvent() {
     error
   } =
     await supabaseClient
+
       .from(
         "match_events"
       )
+
       .insert({
 
         match_id:
@@ -1868,13 +3218,13 @@ async function createEvent() {
   }
 
 
-  // Si es gol, sumar automáticamente.
-
   if (
-    type === "goal"
+    type ===
+    "goal"
   ) {
 
     const field =
+
       Number(teamId) ===
       Number(
         match.home_team_id
@@ -1896,11 +3246,27 @@ async function createEvent() {
       error: scoreError
     } =
       await supabaseClient
-        .from("matches")
+
+        .from(
+          "matches"
+        )
+
         .update({
+
           [field]:
-            newScore
+            newScore,
+
+          status:
+
+            match.status ===
+            "pending"
+
+              ? "live"
+
+              : match.status
+
         })
+
         .eq(
           "id",
           match.id
@@ -1936,8 +3302,9 @@ async function createEvent() {
 // MOSTRAR EVENTOS
 // ======================================================
 
-
-function renderAdminEvents(match) {
+function renderAdminEvents(
+  match
+) {
 
   const container =
     document.getElementById(
@@ -1952,17 +3319,28 @@ function renderAdminEvents(match) {
   }
 
 
+  if (
+    match.sport !==
+    "football"
+  ) {
+
+    container.innerHTML =
+      "";
+
+    return;
+
+  }
+
+
   const list =
     adminEvents
+
       .filter(
         event =>
-          Number(
-            event.match_id
-          ) ===
-          Number(
-            match.id
-          )
+          Number(event.match_id) ===
+          Number(match.id)
       )
+
       .sort(
         (a, b) =>
           Number(b.minute) -
@@ -1989,83 +3367,82 @@ function renderAdminEvents(match) {
     "";
 
 
-  list.forEach(event => {
+  list.forEach(
+    event => {
 
-    const item =
-      document.createElement(
-        "div"
-      );
-
-
-    item.className =
-      "admin-event-row";
+      const item =
+        document.createElement(
+          "div"
+        );
 
 
-    item.innerHTML = `
-
-      <div class="admin-event-icon">
-
-        ${eventIcon(
-          event.event_type
-        )}
-
-      </div>
+      item.className =
+        "admin-event-row";
 
 
-      <div class="admin-event-info">
+      item.innerHTML = `
 
-        <strong>
+        <div class="admin-event-icon">
 
-          ${event.player_name || "Evento"}
-
-        </strong>
-
-
-        <span>
-
-          ${teamName(
-            event.team_id
+          ${eventIcon(
+            event.event_type
           )}
 
-          ·
-
-          ${event.minute}'
-
-        </span>
-
-      </div>
+        </div>
 
 
-      <button
-        class="admin-delete-small"
-      >
-        Eliminar
-      </button>
+        <div class="admin-event-info">
 
-    `;
+          <strong>
+            ${event.player_name || "Evento"}
+          </strong>
+
+          <span>
+
+            ${teamName(
+              event.team_id
+            )}
+
+            ·
+
+            ${event.minute}'
+
+          </span>
+
+        </div>
 
 
-    item
-      .querySelector(
-        "button"
-      )
-      .addEventListener(
-        "click",
-        () => {
+        <button
+          class="admin-delete-small"
+        >
+          Eliminar
+        </button>
 
-          deleteEvent(
-            event
-          );
+      `;
 
-        }
+
+      item
+        .querySelector(
+          "button"
+        )
+        .addEventListener(
+          "click",
+          () => {
+
+            deleteEvent(
+              event
+            );
+
+          }
+        );
+
+
+      container.appendChild(
+        item
       );
 
-
-    container.appendChild(
-      item
-    );
-
-  });
+    }
+  );
 
 }
 
@@ -2074,8 +3451,9 @@ function renderAdminEvents(match) {
 // ELIMINAR EVENTO
 // ======================================================
 
-
-async function deleteEvent(event) {
+async function deleteEvent(
+  event
+) {
 
   const confirmed =
     confirm(
@@ -2098,10 +3476,13 @@ async function deleteEvent(event) {
     error
   } =
     await supabaseClient
+
       .from(
         "match_events"
       )
+
       .delete()
+
       .eq(
         "id",
         event.id
@@ -2115,21 +3496,19 @@ async function deleteEvent(event) {
       error
     );
 
-
     return;
 
   }
 
 
-  // Si era gol, restarlo.
-
   if (
     event.event_type ===
-      "goal" &&
+    "goal" &&
     match
   ) {
 
     const field =
+
       Number(
         event.team_id
       ) ===
@@ -2156,11 +3535,16 @@ async function deleteEvent(event) {
 
 
     await supabaseClient
-      .from("matches")
+
+      .from(
+        "matches"
+      )
+
       .update({
         [field]:
           newScore
       })
+
       .eq(
         "id",
         match.id
@@ -2175,9 +3559,8 @@ async function deleteEvent(event) {
 
 
 // ======================================================
-// FINALIZAR PARTIDO
+// FINALIZAR / REABRIR
 // ======================================================
-
 
 async function finishMatch() {
 
@@ -2230,11 +3613,6 @@ async function finishMatch() {
 }
 
 
-// ======================================================
-// REABRIR PARTIDO
-// ======================================================
-
-
 async function reopenMatch() {
 
   const confirmed =
@@ -2250,10 +3628,20 @@ async function reopenMatch() {
   }
 
 
+  const match =
+    currentMatch();
+
+
   await updateMatch({
 
     status:
-      "pending",
+
+      match?.sport ===
+      "padel"
+
+        ? "live"
+
+        : "pending",
 
     clock_running:
       false,
@@ -2269,7 +3657,6 @@ async function reopenMatch() {
 // ======================================================
 // CREAR PARTIDOS
 // ======================================================
-
 
 function setupMatchEvents() {
 
@@ -2289,20 +3676,14 @@ function setupMatchEvents() {
   }
 
 
-  const button =
-    document.getElementById(
+  document
+    .getElementById(
       "createMatchButton"
-    );
-
-
-  if (button) {
-
-    button.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       createMatch
     );
-
-  }
 
 }
 
@@ -2338,11 +3719,6 @@ function refreshCreateTeamSelectors() {
   );
 
 }
-
-
-// ======================================================
-// CREAR PARTIDO
-// ======================================================
 
 
 async function createMatch() {
@@ -2402,87 +3778,137 @@ async function createMatch() {
   }
 
 
+  const payload = {
+
+    sport,
+
+    home_team_id:
+      home,
+
+    away_team_id:
+      away,
+
+    court:
+      document
+        .getElementById(
+          "newMatchCourt"
+        )
+        .value
+        .trim(),
+
+    group_name:
+      document
+        .getElementById(
+          "newMatchGroup"
+        )
+        .value
+        .trim(),
+
+    round_name:
+      document
+        .getElementById(
+          "newMatchRound"
+        )
+        .value
+        .trim(),
+
+    match_date:
+      document
+        .getElementById(
+          "newMatchDate"
+        )
+        .value ||
+      null,
+
+    start_time:
+      document
+        .getElementById(
+          "newMatchTime"
+        )
+        .value ||
+      null,
+
+    home_score:
+      0,
+
+    away_score:
+      0,
+
+    status:
+      "pending",
+
+    period:
+
+      sport ===
+      "padel"
+
+        ? "SET ÚNICO"
+
+        : "1T",
+
+    elapsed_seconds:
+      0,
+
+    clock_running:
+      false,
+
+    clock_started_at:
+      null
+
+  };
+
+
+  if (
+    sport ===
+    "padel"
+  ) {
+
+    Object.assign(
+      payload,
+      {
+
+        padel_home_games:
+          0,
+
+        padel_away_games:
+          0,
+
+        padel_home_points:
+          0,
+
+        padel_away_points:
+          0,
+
+        padel_tiebreak:
+          false,
+
+        padel_home_tiebreak:
+          0,
+
+        padel_away_tiebreak:
+          0,
+
+        padel_history:
+          []
+
+      }
+    );
+
+  }
+
+
   const {
     error
   } =
     await supabaseClient
-      .from("matches")
-      .insert({
 
-        sport,
+      .from(
+        "matches"
+      )
 
-        home_team_id:
-          home,
-
-        away_team_id:
-          away,
-
-        court:
-          document
-            .getElementById(
-              "newMatchCourt"
-            )
-            .value
-            .trim(),
-
-        group_name:
-          document
-            .getElementById(
-              "newMatchGroup"
-            )
-            .value
-            .trim(),
-
-        round_name:
-          document
-            .getElementById(
-              "newMatchRound"
-            )
-            .value
-            .trim(),
-
-        match_date:
-          document
-            .getElementById(
-              "newMatchDate"
-            )
-            .value ||
-          null,
-
-        start_time:
-          document
-            .getElementById(
-              "newMatchTime"
-            )
-            .value ||
-          null,
-
-        home_score:
-          0,
-
-        away_score:
-          0,
-
-        status:
-          "pending",
-
-        period:
-          sport === "padel"
-
-            ? "SET 1"
-
-            : "1T",
-
-        elapsed_seconds:
-          0,
-
-        clock_running:
-          false,
-
-        clock_started_at:
-          null
-
-      });
+      .insert(
+        payload
+      );
 
 
   if (error) {
@@ -2514,9 +3940,8 @@ async function createMatch() {
 
 
 // ======================================================
-// LISTA DE PARTIDOS
+// LISTA PARTIDOS
 // ======================================================
-
 
 function renderMatchesList() {
 
@@ -2544,9 +3969,7 @@ function renderMatchesList() {
     container.innerHTML = `
 
       <div class="admin-empty">
-
         No hay partidos.
-
       </div>
 
     `;
@@ -2556,158 +3979,194 @@ function renderMatchesList() {
   }
 
 
-  adminMatches.forEach(match => {
+  adminMatches.forEach(
+    match => {
 
-    const card =
-      document.createElement(
-        "article"
-      );
-
-
-    card.className =
-      "admin-list-card";
+      const card =
+        document.createElement(
+          "article"
+        );
 
 
-    const sportIcon =
-      match.sport === "padel"
-
-        ? "🎾"
-
-        : "⚽";
+      card.className =
+        "admin-list-card";
 
 
-    const time =
-      match.start_time
-        ?.slice(0,5) ||
-      "--:--";
+      const sportIcon =
+
+        match.sport ===
+        "padel"
+
+          ? "🎾"
+
+          : "⚽";
 
 
-    card.innerHTML = `
+      const time =
 
-      <div class="admin-list-main">
+        match.start_time
+          ?.slice(
+            0,
+            5
+          ) ||
 
-        <span>
-
-          ${sportIcon}
-
-          ${time}
-
-        </span>
+        "--:--";
 
 
-        <strong>
+      const scoreText =
 
-          ${teamName(
-            match.home_team_id
-          )}
+        match.status ===
+        "pending"
 
-          vs
+          ? "Pendiente"
 
-          ${teamName(
-            match.away_team_id
-          )}
+          : match.sport ===
+            "padel"
 
-        </strong>
+            ? `${padelHomeGames(match)} - ${padelAwayGames(match)}`
 
-
-        <small>
-
-          ${match.court || "Sin cancha"}
-
-          ${
-            match.group_name
-
-              ? " · " +
-                match.group_name
-
-              : ""
-          }
-
-        </small>
-
-      </div>
+            : `${match.home_score || 0} - ${match.away_score || 0}`;
 
 
-      <div class="admin-list-actions">
+      card.innerHTML = `
 
-        <button
-          class="edit-match"
-        >
-          Editar
-        </button>
+        <div class="admin-list-main">
 
+          <span>
 
-        <button
-          class="delete-match"
-        >
-          Eliminar
-        </button>
+            ${sportIcon}
 
-      </div>
+            ${time}
 
-    `;
+            ·
+
+            ${scoreText}
+
+          </span>
 
 
-    card
-      .querySelector(
-        ".edit-match"
-      )
-      .addEventListener(
-        "click",
-        () => {
+          <strong>
 
-          selectedMatchId =
-            match.id;
+            ${teamName(
+              match.home_team_id
+            )}
+
+            vs
+
+            ${teamName(
+              match.away_team_id
+            )}
+
+          </strong>
 
 
-          const sport =
-            document.getElementById(
-              "controlSport"
+          <small>
+
+            ${match.court || "Sin cancha"}
+
+            ${
+
+              match.group_name
+
+                ? " · " +
+                  match.group_name
+
+                : ""
+
+            }
+
+          </small>
+
+        </div>
+
+
+        <div class="admin-list-actions">
+
+          <button
+            class="edit-match"
+          >
+            Editar
+          </button>
+
+
+          <button
+            class="delete-match"
+          >
+            Eliminar
+          </button>
+
+        </div>
+
+      `;
+
+
+      card
+        .querySelector(
+          ".edit-match"
+        )
+        .addEventListener(
+
+          "click",
+
+          () => {
+
+            selectedMatchId =
+              match.id;
+
+
+            const sport =
+              document.getElementById(
+                "controlSport"
+              );
+
+
+            if (sport) {
+
+              sport.value =
+                match.sport;
+
+            }
+
+
+            openAdminSection(
+              "control"
             );
 
 
-          if (sport) {
+            renderMatchSelector();
 
-            sport.value =
-              match.sport;
+            renderControl();
 
           }
 
-
-          openAdminSection(
-            "control"
-          );
+        );
 
 
-          renderMatchSelector();
-
-          renderControl();
-
-        }
-      );
-
-
-    card
-      .querySelector(
-        ".delete-match"
-      )
-      .addEventListener(
-        "click",
-        () => {
-
-          deleteMatch(
-            match
-          );
-
-        }
-      );
-
-
-    container.appendChild(
       card
-    );
+        .querySelector(
+          ".delete-match"
+        )
+        .addEventListener(
 
-  });
+          "click",
+
+          () => {
+
+            deleteMatch(
+              match
+            );
+
+          }
+
+        );
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
 
 }
 
@@ -2716,12 +4175,15 @@ function renderMatchesList() {
 // ELIMINAR PARTIDO
 // ======================================================
 
-
-async function deleteMatch(match) {
+async function deleteMatch(
+  match
+) {
 
   const confirmed =
     confirm(
+
       `¿Eliminar ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}?`
+
     );
 
 
@@ -2736,8 +4198,13 @@ async function deleteMatch(match) {
     error
   } =
     await supabaseClient
-      .from("matches")
+
+      .from(
+        "matches"
+      )
+
       .delete()
+
       .eq(
         "id",
         match.id
@@ -2775,23 +4242,16 @@ async function deleteMatch(match) {
 // EQUIPOS
 // ======================================================
 
-
 function setupTeamEvents() {
 
-  const button =
-    document.getElementById(
+  document
+    .getElementById(
       "createTeamButton"
-    );
-
-
-  if (button) {
-
-    button.addEventListener(
+    )
+    ?.addEventListener(
       "click",
       createTeam
     );
-
-  }
 
 }
 
@@ -2799,7 +4259,6 @@ function setupTeamEvents() {
 // ======================================================
 // CREAR EQUIPO
 // ======================================================
-
 
 async function createTeam() {
 
@@ -2827,7 +4286,11 @@ async function createTeam() {
     error
   } =
     await supabaseClient
-      .from("teams")
+
+      .from(
+        "teams"
+      )
+
       .insert({
 
         name,
@@ -2890,9 +4353,8 @@ async function createTeam() {
 
 
 // ======================================================
-// LISTA DE EQUIPOS
+// LISTA EQUIPOS
 // ======================================================
-
 
 function renderTeamsList() {
 
@@ -2920,9 +4382,7 @@ function renderTeamsList() {
     container.innerHTML = `
 
       <div class="admin-empty">
-
         No hay equipos.
-
       </div>
 
     `;
@@ -2932,109 +4392,119 @@ function renderTeamsList() {
   }
 
 
-  adminTeams.forEach(team => {
+  adminTeams.forEach(
+    team => {
 
-    const card =
-      document.createElement(
-        "article"
-      );
-
-
-    card.className =
-      "admin-list-card";
+      const card =
+        document.createElement(
+          "article"
+        );
 
 
-    card.innerHTML = `
+      card.className =
+        "admin-list-card";
 
-      <div class="admin-list-main">
 
-        <span>
+      card.innerHTML = `
 
-          ${
-            team.sport ===
-            "padel"
+        <div class="admin-list-main">
 
-              ? "🎾 Pádel"
+          <span>
 
-              : "⚽ Fútbol"
+            ${
+
+              team.sport ===
+              "padel"
+
+                ? "🎾 Pádel"
+
+                : "⚽ Fútbol"
+
+            }
+
+          </span>
+
+
+          <strong>
+
+            ${team.name}
+
+          </strong>
+
+
+          <small>
+
+            ${team.group_name || "Sin grupo"}
+
+          </small>
+
+        </div>
+
+
+        <div class="admin-list-actions">
+
+          <button
+            class="edit-team"
+          >
+            Editar
+          </button>
+
+
+          <button
+            class="delete-team"
+          >
+            Eliminar
+          </button>
+
+        </div>
+
+      `;
+
+
+      card
+        .querySelector(
+          ".edit-team"
+        )
+        .addEventListener(
+
+          "click",
+
+          () => {
+
+            editTeam(
+              team
+            );
+
           }
 
-        </span>
+        );
 
 
-        <strong>
-
-          ${team.name}
-
-        </strong>
-
-
-        <small>
-
-          ${team.group_name || "Sin grupo"}
-
-        </small>
-
-      </div>
-
-
-      <div class="admin-list-actions">
-
-        <button
-          class="edit-team"
-        >
-          Editar
-        </button>
-
-
-        <button
-          class="delete-team"
-        >
-          Eliminar
-        </button>
-
-      </div>
-
-    `;
-
-
-    card
-      .querySelector(
-        ".edit-team"
-      )
-      .addEventListener(
-        "click",
-        () => {
-
-          editTeam(
-            team
-          );
-
-        }
-      );
-
-
-    card
-      .querySelector(
-        ".delete-team"
-      )
-      .addEventListener(
-        "click",
-        () => {
-
-          deleteTeam(
-            team
-          );
-
-        }
-      );
-
-
-    container.appendChild(
       card
-    );
+        .querySelector(
+          ".delete-team"
+        )
+        .addEventListener(
 
-  });
+          "click",
+
+          () => {
+
+            deleteTeam(
+              team
+            );
+
+          }
+
+        );
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
 
 }
 
@@ -3043,8 +4513,9 @@ function renderTeamsList() {
 // EDITAR EQUIPO
 // ======================================================
 
-
-async function editTeam(team) {
+async function editTeam(
+  team
+) {
 
   const name =
     prompt(
@@ -3065,9 +4536,12 @@ async function editTeam(team) {
 
   const group =
     prompt(
+
       "Grupo:",
+
       team.group_name ||
       ""
+
     );
 
 
@@ -3084,7 +4558,11 @@ async function editTeam(team) {
     error
   } =
     await supabaseClient
-      .from("teams")
+
+      .from(
+        "teams"
+      )
+
       .update({
 
         name:
@@ -3094,6 +4572,7 @@ async function editTeam(team) {
           group.trim()
 
       })
+
       .eq(
         "id",
         team.id
@@ -3127,8 +4606,9 @@ async function editTeam(team) {
 // ELIMINAR EQUIPO
 // ======================================================
 
-
-async function deleteTeam(team) {
+async function deleteTeam(
+  team
+) {
 
   const confirmed =
     confirm(
@@ -3147,8 +4627,13 @@ async function deleteTeam(team) {
     error
   } =
     await supabaseClient
-      .from("teams")
+
+      .from(
+        "teams"
+      )
+
       .delete()
+
       .eq(
         "id",
         team.id
