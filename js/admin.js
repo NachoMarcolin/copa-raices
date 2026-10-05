@@ -1,6 +1,8 @@
 // ======================================================
 // COPA RAÍCES - ADMIN
+// SIN INICIO DE SESIÓN
 // ======================================================
+
 
 let adminTeams = [];
 let adminMatches = [];
@@ -12,19 +14,9 @@ let clockInterval = null;
 
 
 // ======================================================
-// ELEMENTOS
+// INICIO
 // ======================================================
 
-const loginScreen =
-  document.getElementById("loginScreen");
-
-const adminApp =
-  document.getElementById("adminApp");
-
-
-// ======================================================
-// INIT
-// ======================================================
 
 document.addEventListener(
   "DOMContentLoaded",
@@ -34,8 +26,6 @@ document.addEventListener(
 
 async function initAdmin() {
 
-  setupLogin();
-
   setupNavigation();
 
   setupControlEvents();
@@ -44,160 +34,15 @@ async function initAdmin() {
 
   setupTeamEvents();
 
-  const {
-    data: { session }
-  } =
-    await supabaseClient.auth.getSession();
-
-
-  if (session) {
-
-    showAdmin();
-
-    await loadEverything();
-
-  }
-
-  else {
-
-    showLogin();
-
-  }
-
-
-  supabaseClient.auth.onAuthStateChange(
-    async (_event, session) => {
-
-      if (session) {
-
-        showAdmin();
-
-        await loadEverything();
-
-      }
-
-      else {
-
-        showLogin();
-
-      }
-
-    }
-  );
+  await loadEverything();
 
 }
 
 
 // ======================================================
-// LOGIN
+// NAVEGACIÓN
 // ======================================================
 
-function setupLogin() {
-
-  document
-    .getElementById("loginForm")
-    .addEventListener(
-      "submit",
-      async event => {
-
-        event.preventDefault();
-
-
-        const email =
-          document
-            .getElementById("loginEmail")
-            .value
-            .trim();
-
-
-        const password =
-          document
-            .getElementById("loginPassword")
-            .value;
-
-
-        const message =
-          document
-            .getElementById("loginMessage");
-
-
-        message.textContent =
-          "Ingresando...";
-
-
-        const {
-          error
-        } =
-          await supabaseClient
-            .auth
-            .signInWithPassword({
-              email,
-              password
-            });
-
-
-        if (error) {
-
-          message.textContent =
-            "Email o contraseña incorrectos.";
-
-          return;
-
-        }
-
-
-        message.textContent = "";
-
-      }
-    );
-
-
-  document
-    .getElementById("logoutButton")
-    .addEventListener(
-      "click",
-      async () => {
-
-        await supabaseClient
-          .auth
-          .signOut();
-
-      }
-    );
-
-}
-
-
-function showLogin() {
-
-  loginScreen.classList.remove(
-    "hidden"
-  );
-
-  adminApp.classList.add(
-    "hidden"
-  );
-
-}
-
-
-function showAdmin() {
-
-  loginScreen.classList.add(
-    "hidden"
-  );
-
-  adminApp.classList.remove(
-    "hidden"
-  );
-
-}
-
-
-
-// ======================================================
-// NAV
-// ======================================================
 
 function setupNavigation() {
 
@@ -245,20 +90,30 @@ function openAdminSection(section) {
     .forEach(button => {
 
       button.classList.toggle(
+
         "active",
+
         button.dataset.adminSection ===
           section
+
       );
 
     });
 
 
-  document
-    .getElementById(
+  const sectionElement =
+    document.getElementById(
       `admin-${section}`
-    )
-    .classList
-    .add("active");
+    );
+
+
+  if (sectionElement) {
+
+    sectionElement.classList.add(
+      "active"
+    );
+
+  }
 
 
   window.scrollTo({
@@ -269,10 +124,10 @@ function openAdminSection(section) {
 }
 
 
+// ======================================================
+// CARGAR TODO
+// ======================================================
 
-// ======================================================
-// LOAD
-// ======================================================
 
 async function loadEverything() {
 
@@ -287,6 +142,11 @@ async function loadEverything() {
 }
 
 
+// ======================================================
+// EQUIPOS
+// ======================================================
+
+
 async function loadTeams() {
 
   const {
@@ -296,12 +156,20 @@ async function loadTeams() {
     await supabaseClient
       .from("teams")
       .select("*")
-      .order("name");
+      .order(
+        "name",
+        {
+          ascending: true
+        }
+      );
 
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error cargando equipos:",
+      error
+    );
 
     return;
 
@@ -312,6 +180,11 @@ async function loadTeams() {
     data || [];
 
 }
+
+
+// ======================================================
+// PARTIDOS
+// ======================================================
 
 
 async function loadMatches() {
@@ -341,7 +214,10 @@ async function loadMatches() {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error cargando partidos:",
+      error
+    );
 
     return;
 
@@ -367,8 +243,8 @@ async function loadMatches() {
     selectedMatchId &&
     !adminMatches.some(
       match =>
-        match.id ===
-        selectedMatchId
+        Number(match.id) ===
+        Number(selectedMatchId)
     )
   ) {
 
@@ -379,6 +255,11 @@ async function loadMatches() {
   }
 
 }
+
+
+// ======================================================
+// EVENTOS
+// ======================================================
 
 
 async function loadEvents() {
@@ -400,7 +281,10 @@ async function loadEvents() {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error cargando eventos:",
+      error
+    );
 
     return;
 
@@ -413,10 +297,10 @@ async function loadEvents() {
 }
 
 
-
 // ======================================================
 // HELPERS
 // ======================================================
+
 
 function getTeam(id) {
 
@@ -451,7 +335,10 @@ function currentMatch() {
 function formatClock(seconds) {
 
   const mins =
-    Math.floor(seconds / 60);
+    Math.floor(
+      seconds / 60
+    );
+
 
   const secs =
     seconds % 60;
@@ -471,13 +358,16 @@ function formatClock(seconds) {
 function getLiveSeconds(match) {
 
   if (!match) {
+
     return 0;
+
   }
 
 
   let total =
     Number(
-      match.elapsed_seconds || 0
+      match.elapsed_seconds ||
+      0
     );
 
 
@@ -537,10 +427,10 @@ function eventIcon(type) {
 }
 
 
+// ======================================================
+// RENDER GENERAL
+// ======================================================
 
-// ======================================================
-// RENDER ALL
-// ======================================================
 
 function renderAll() {
 
@@ -557,22 +447,37 @@ function renderAll() {
 }
 
 
+// ======================================================
+// SELECTOR DE PARTIDO
+// ======================================================
 
-// ======================================================
-// SELECTOR PARTIDO
-// ======================================================
 
 function renderMatchSelector() {
 
-  const sport =
-    document
-      .getElementById("controlSport")
-      .value;
+  const sportSelect =
+    document.getElementById(
+      "controlSport"
+    );
 
 
   const select =
-    document
-      .getElementById("matchSelector");
+    document.getElementById(
+      "matchSelector"
+    );
+
+
+  if (
+    !sportSelect ||
+    !select
+  ) {
+
+    return;
+
+  }
+
+
+  const sport =
+    sportSelect.value;
 
 
   const filtered =
@@ -592,27 +497,38 @@ function renderMatchSelector() {
         "option"
       );
 
+
     option.textContent =
       "No hay partidos";
 
-    option.value = "";
 
-    select.appendChild(option);
+    option.value =
+      "";
 
-    selectedMatchId = null;
+
+    select.appendChild(
+      option
+    );
+
+
+    selectedMatchId =
+      null;
+
 
     return;
 
   }
 
 
-  if (
-    !filtered.some(
+  const selectedExists =
+    filtered.some(
       match =>
         Number(match.id) ===
         Number(selectedMatchId)
-    )
-  ) {
+    );
+
+
+  if (!selectedExists) {
 
     selectedMatchId =
       filtered[0].id;
@@ -632,8 +548,14 @@ function renderMatchSelector() {
       match.id;
 
 
+    const time =
+      match.start_time
+        ?.slice(0, 5) ||
+      "--:--";
+
+
     option.textContent =
-      `${match.start_time?.slice(0,5) || "--:--"} · ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`;
+      `${time} · ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`;
 
 
     if (
@@ -641,22 +563,25 @@ function renderMatchSelector() {
       Number(selectedMatchId)
     ) {
 
-      option.selected = true;
+      option.selected =
+        true;
 
     }
 
 
-    select.appendChild(option);
+    select.appendChild(
+      option
+    );
 
   });
 
 }
 
 
+// ======================================================
+// PANEL DE CONTROL
+// ======================================================
 
-// ======================================================
-// CONTROL
-// ======================================================
 
 function renderControl() {
 
@@ -667,28 +592,31 @@ function renderControl() {
   stopClockInterval();
 
 
-  if (!match) {
+  const panel =
+    document.getElementById(
+      "controlPanel"
+    );
 
-    document
-      .getElementById(
-        "controlPanel"
-      )
-      .style
-      .display =
-        "none";
+
+  if (!panel) {
 
     return;
 
   }
 
 
-  document
-    .getElementById(
-      "controlPanel"
-    )
-    .style
-    .display =
-      "block";
+  if (!match) {
+
+    panel.style.display =
+      "none";
+
+    return;
+
+  }
+
+
+  panel.style.display =
+    "block";
 
 
   document
@@ -732,23 +660,42 @@ function renderControl() {
       "adminMatchCourt"
     )
     .textContent =
-      `${match.court || "Sin cancha"} ${match.group_name ? "· " + match.group_name : ""}`;
+      `${match.court || "Sin cancha"}${match.group_name ? " · " + match.group_name : ""}`;
 
 
-  renderStatus(match);
-
-  renderPeriodButtons(match);
-
-  fillMatchForm(match);
-
-  fillEventTeams(match);
-
-  renderAdminEvents(match);
-
-  updateClockDisplay(match);
+  renderStatus(
+    match
+  );
 
 
-  if (match.clock_running) {
+  renderPeriodButtons(
+    match
+  );
+
+
+  fillMatchForm(
+    match
+  );
+
+
+  fillEventTeams(
+    match
+  );
+
+
+  renderAdminEvents(
+    match
+  );
+
+
+  updateClockDisplay(
+    match
+  );
+
+
+  if (
+    match.clock_running
+  ) {
 
     startClockInterval();
 
@@ -757,10 +704,10 @@ function renderControl() {
 }
 
 
+// ======================================================
+// ESTADO
+// ======================================================
 
-// ======================================================
-// STATUS
-// ======================================================
 
 function renderStatus(match) {
 
@@ -768,6 +715,13 @@ function renderStatus(match) {
     document.getElementById(
       "adminMatchStatus"
     );
+
+
+  if (!badge) {
+
+    return;
+
+  }
 
 
   badge.className =
@@ -782,6 +736,7 @@ function renderStatus(match) {
     badge.textContent =
       "FINAL";
 
+
     badge.classList.add(
       "finished"
     );
@@ -790,11 +745,12 @@ function renderStatus(match) {
 
   else if (
     match.status ===
-      "live"
+    "live"
   ) {
 
     badge.textContent =
       "EN VIVO";
+
 
     badge.classList.add(
       "live"
@@ -812,33 +768,53 @@ function renderStatus(match) {
 }
 
 
+// ======================================================
+// RELOJ
+// ======================================================
 
-// ======================================================
-// CLOCK
-// ======================================================
 
 function updateClockDisplay(match) {
 
   const seconds =
-    getLiveSeconds(match);
+    getLiveSeconds(
+      match
+    );
 
 
-  document
-    .getElementById(
+  const clock =
+    document.getElementById(
       "adminClock"
-    )
-    .textContent =
-      formatClock(seconds);
+    );
 
 
-  document
-    .getElementById(
+  if (clock) {
+
+    clock.textContent =
+      formatClock(
+        seconds
+      );
+
+  }
+
+
+  const minuteInput =
+    document.getElementById(
       "eventMinute"
-    )
-    .value =
+    );
+
+
+  if (
+    minuteInput &&
+    document.activeElement !==
+      minuteInput
+  ) {
+
+    minuteInput.value =
       Math.floor(
         seconds / 60
       );
+
+  }
 
 }
 
@@ -879,27 +855,33 @@ function stopClockInterval() {
       clockInterval
     );
 
-    clockInterval = null;
+
+    clockInterval =
+      null;
 
   }
 
 }
 
 
-
 // ======================================================
-// PERIOD
+// PERÍODOS
 // ======================================================
 
-function renderPeriodButtons(
-  match
-) {
+
+function renderPeriodButtons(match) {
 
   const container =
-    document
-      .getElementById(
-        "periodButtons"
-      );
+    document.getElementById(
+      "periodButtons"
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
 
 
   const periods =
@@ -923,7 +905,8 @@ function renderPeriodButtons(
       ];
 
 
-  container.innerHTML = "";
+  container.innerHTML =
+    "";
 
 
   periods.forEach(period => {
@@ -975,10 +958,10 @@ function renderPeriodButtons(
 }
 
 
+// ======================================================
+// FORMULARIO PARTIDO
+// ======================================================
 
-// ======================================================
-// FORM PARTIDO
-// ======================================================
 
 function fillMatchForm(match) {
 
@@ -1034,16 +1017,16 @@ function fillMatchForm(match) {
     )
     .value =
       match.start_time
-        ?.slice(0,5) ||
+        ?.slice(0, 5) ||
       "";
 
 }
 
 
+// ======================================================
+// SELECTORES DE EQUIPO
+// ======================================================
 
-// ======================================================
-// TEAM SELECT
-// ======================================================
 
 function fillTeamSelect(
   elementId,
@@ -1057,65 +1040,109 @@ function fillTeamSelect(
     );
 
 
-  select.innerHTML = "";
+  if (!select) {
+
+    return;
+
+  }
 
 
-  adminTeams
-    .filter(
+  select.innerHTML =
+    "";
+
+
+  const filtered =
+    adminTeams.filter(
       team =>
         team.sport ===
         sport
-    )
-    .forEach(team => {
-
-      const option =
-        document.createElement(
-          "option"
-        );
+    );
 
 
-      option.value =
-        team.id;
+  if (!filtered.length) {
 
-      option.textContent =
-        team.name;
-
-
-      if (
-        Number(team.id) ===
-        Number(selectedId)
-      ) {
-
-        option.selected =
-          true;
-
-      }
-
-
-      select.appendChild(
-        option
+    const option =
+      document.createElement(
+        "option"
       );
 
-    });
+
+    option.textContent =
+      "No hay equipos";
+
+
+    option.value =
+      "";
+
+
+    select.appendChild(
+      option
+    );
+
+
+    return;
+
+  }
+
+
+  filtered.forEach(team => {
+
+    const option =
+      document.createElement(
+        "option"
+      );
+
+
+    option.value =
+      team.id;
+
+
+    option.textContent =
+      team.name;
+
+
+    if (
+      Number(team.id) ===
+      Number(selectedId)
+    ) {
+
+      option.selected =
+        true;
+
+    }
+
+
+    select.appendChild(
+      option
+    );
+
+  });
 
 }
 
 
+// ======================================================
+// EQUIPOS PARA EVENTOS
+// ======================================================
 
-// ======================================================
-// EVENT TEAM
-// ======================================================
 
 function fillEventTeams(match) {
 
   const select =
-    document
-      .getElementById(
-        "eventTeam"
-      );
+    document.getElementById(
+      "eventTeam"
+    );
 
 
-  select.innerHTML = "";
+  if (!select) {
+
+    return;
+
+  }
+
+
+  select.innerHTML =
+    "";
 
 
   [
@@ -1130,7 +1157,9 @@ function fillEventTeams(match) {
       );
 
 
-    option.value = id;
+    option.value =
+      id;
+
 
     option.textContent =
       teamName(id);
@@ -1145,22 +1174,28 @@ function fillEventTeams(match) {
 }
 
 
+// ======================================================
+// EVENTOS DE CONTROLES
+// ======================================================
 
-// ======================================================
-// CONTROL EVENTS
-// ======================================================
 
 function setupControlEvents() {
 
-  document
-    .getElementById(
+  const controlSport =
+    document.getElementById(
       "controlSport"
-    )
-    .addEventListener(
+    );
+
+
+  if (controlSport) {
+
+    controlSport.addEventListener(
       "change",
       () => {
 
-        selectedMatchId = null;
+        selectedMatchId =
+          null;
+
 
         renderMatchSelector();
 
@@ -1169,12 +1204,18 @@ function setupControlEvents() {
       }
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const matchSelector =
+    document.getElementById(
       "matchSelector"
-    )
-    .addEventListener(
+    );
+
+
+  if (matchSelector) {
+
+    matchSelector.addEventListener(
       "change",
       event => {
 
@@ -1183,10 +1224,13 @@ function setupControlEvents() {
             event.target.value
           );
 
+
         renderControl();
 
       }
     );
+
+  }
 
 
   scoreButton(
@@ -1195,17 +1239,20 @@ function setupControlEvents() {
     1
   );
 
+
   scoreButton(
     "homeMinus",
     "home",
     -1
   );
 
+
   scoreButton(
     "awayPlus",
     "away",
     1
   );
+
 
   scoreButton(
     "awayMinus",
@@ -1214,82 +1261,124 @@ function setupControlEvents() {
   );
 
 
-  document
-    .getElementById(
+  const start =
+    document.getElementById(
       "startClock"
-    )
-    .addEventListener(
+    );
+
+
+  if (start) {
+
+    start.addEventListener(
       "click",
       startClock
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const pause =
+    document.getElementById(
       "pauseClock"
-    )
-    .addEventListener(
+    );
+
+
+  if (pause) {
+
+    pause.addEventListener(
       "click",
       pauseClock
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const reset =
+    document.getElementById(
       "resetClock"
-    )
-    .addEventListener(
+    );
+
+
+  if (reset) {
+
+    reset.addEventListener(
       "click",
       resetClock
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const save =
+    document.getElementById(
       "saveMatchInfo"
-    )
-    .addEventListener(
+    );
+
+
+  if (save) {
+
+    save.addEventListener(
       "click",
       saveMatchInfo
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const addEvent =
+    document.getElementById(
       "addEventButton"
-    )
-    .addEventListener(
+    );
+
+
+  if (addEvent) {
+
+    addEvent.addEventListener(
       "click",
       createEvent
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const finish =
+    document.getElementById(
       "finishMatchButton"
-    )
-    .addEventListener(
+    );
+
+
+  if (finish) {
+
+    finish.addEventListener(
       "click",
       finishMatch
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const reopen =
+    document.getElementById(
       "reopenMatchButton"
-    )
-    .addEventListener(
+    );
+
+
+  if (reopen) {
+
+    reopen.addEventListener(
       "click",
       reopenMatch
     );
 
+  }
+
 }
 
 
+// ======================================================
+// MARCADOR
+// ======================================================
 
-// ======================================================
-// SCORE
-// ======================================================
 
 function scoreButton(
   id,
@@ -1297,51 +1386,71 @@ function scoreButton(
   amount
 ) {
 
-  document
-    .getElementById(id)
-    .addEventListener(
-      "click",
-      async () => {
-
-        const match =
-          currentMatch();
+  const button =
+    document.getElementById(
+      id
+    );
 
 
-        if (!match) {
-          return;
-        }
+  if (!button) {
+
+    return;
+
+  }
 
 
-        const field =
-          side === "home"
-            ? "home_score"
-            : "away_score";
+  button.addEventListener(
+    "click",
+    async () => {
+
+      const match =
+        currentMatch();
 
 
-        const value =
-          Math.max(
-            0,
-            Number(
-              match[field] || 0
-            ) +
-            amount
-          );
+      if (!match) {
 
-
-        await updateMatch({
-          [field]: value
-        });
+        return;
 
       }
-    );
+
+
+      const field =
+        side === "home"
+
+          ? "home_score"
+
+          : "away_score";
+
+
+      const value =
+        Math.max(
+
+          0,
+
+          Number(
+            match[field] ||
+            0
+          )
+          +
+          amount
+
+        );
+
+
+      await updateMatch({
+        [field]: value
+      });
+
+    }
+  );
 
 }
 
 
+// ======================================================
+// ACTUALIZAR PARTIDO
+// ======================================================
 
-// ======================================================
-// UPDATE MATCH
-// ======================================================
 
 async function updateMatch(
   changes
@@ -1352,7 +1461,9 @@ async function updateMatch(
 
 
   if (!match) {
+
     return;
+
   }
 
 
@@ -1361,7 +1472,9 @@ async function updateMatch(
   } =
     await supabaseClient
       .from("matches")
-      .update(changes)
+      .update(
+        changes
+      )
       .eq(
         "id",
         match.id
@@ -1370,11 +1483,16 @@ async function updateMatch(
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error actualizando partido:",
+      error
+    );
+
 
     alert(
       "No se pudo actualizar el partido."
     );
+
 
     return;
 
@@ -1388,10 +1506,10 @@ async function updateMatch(
 }
 
 
+// ======================================================
+// INICIAR RELOJ
+// ======================================================
 
-// ======================================================
-// START CLOCK
-// ======================================================
 
 async function startClock() {
 
@@ -1400,20 +1518,28 @@ async function startClock() {
 
 
   if (!match) {
+
     return;
+
   }
 
 
-  if (match.clock_running) {
+  if (
+    match.clock_running
+  ) {
+
     return;
+
   }
 
 
   await updateMatch({
 
-    status: "live",
+    status:
+      "live",
 
-    clock_running: true,
+    clock_running:
+      true,
 
     clock_started_at:
       new Date()
@@ -1424,10 +1550,10 @@ async function startClock() {
 }
 
 
+// ======================================================
+// PAUSAR RELOJ
+// ======================================================
 
-// ======================================================
-// PAUSE CLOCK
-// ======================================================
 
 async function pauseClock() {
 
@@ -1436,12 +1562,16 @@ async function pauseClock() {
 
 
   if (!match) {
+
     return;
+
   }
 
 
   const seconds =
-    getLiveSeconds(match);
+    getLiveSeconds(
+      match
+    );
 
 
   await updateMatch({
@@ -1460,10 +1590,10 @@ async function pauseClock() {
 }
 
 
+// ======================================================
+// REINICIAR RELOJ
+// ======================================================
 
-// ======================================================
-// RESET CLOCK
-// ======================================================
 
 async function resetClock() {
 
@@ -1474,27 +1604,32 @@ async function resetClock() {
 
 
   if (!confirmed) {
+
     return;
+
   }
 
 
   await updateMatch({
 
-    elapsed_seconds: 0,
+    elapsed_seconds:
+      0,
 
-    clock_running: false,
+    clock_running:
+      false,
 
-    clock_started_at: null
+    clock_started_at:
+      null
 
   });
 
 }
 
 
+// ======================================================
+// GUARDAR DATOS DEL PARTIDO
+// ======================================================
 
-// ======================================================
-// SAVE MATCH INFO
-// ======================================================
 
 async function saveMatchInfo() {
 
@@ -1503,7 +1638,9 @@ async function saveMatchInfo() {
 
 
   if (!match) {
+
     return;
+
   }
 
 
@@ -1527,7 +1664,23 @@ async function saveMatchInfo() {
     );
 
 
-  if (home === away) {
+  if (
+    !home ||
+    !away
+  ) {
+
+    alert(
+      "Seleccioná local y visitante."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    home === away
+  ) {
 
     alert(
       "Local y visitante no pueden ser el mismo equipo."
@@ -1591,10 +1744,10 @@ async function saveMatchInfo() {
 }
 
 
+// ======================================================
+// CREAR EVENTO
+// ======================================================
 
-// ======================================================
-// EVENTS
-// ======================================================
 
 async function createEvent() {
 
@@ -1603,7 +1756,9 @@ async function createEvent() {
 
 
   if (!match) {
+
     return;
+
   }
 
 
@@ -1644,11 +1799,38 @@ async function createEvent() {
     ) || 0;
 
 
+  if (!teamId) {
+
+    alert(
+      "Seleccioná un equipo."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    type !== "point" &&
+    !player
+  ) {
+
+    alert(
+      "Ingresá el nombre del jugador."
+    );
+
+    return;
+
+  }
+
+
   const {
     error
   } =
     await supabaseClient
-      .from("match_events")
+      .from(
+        "match_events"
+      )
       .insert({
 
         match_id:
@@ -1670,40 +1852,69 @@ async function createEvent() {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error creando evento:",
+      error
+    );
+
 
     alert(
       "No se pudo crear el evento."
     );
+
 
     return;
 
   }
 
 
-  if (type === "goal") {
+  // Si es gol, sumar automáticamente.
+
+  if (
+    type === "goal"
+  ) {
 
     const field =
       Number(teamId) ===
-      Number(match.home_team_id)
+      Number(
+        match.home_team_id
+      )
 
         ? "home_score"
 
         : "away_score";
 
 
-    await supabaseClient
-      .from("matches")
-      .update({
-        [field]:
-          Number(
-            match[field] || 0
-          ) + 1
-      })
-      .eq(
-        "id",
-        match.id
+    const newScore =
+      Number(
+        match[field] ||
+        0
+      ) + 1;
+
+
+    const {
+      error: scoreError
+    } =
+      await supabaseClient
+        .from("matches")
+        .update({
+          [field]:
+            newScore
+        })
+        .eq(
+          "id",
+          match.id
+        );
+
+
+    if (scoreError) {
+
+      console.error(
+        "Error actualizando marcador:",
+        scoreError
       );
+
+    }
 
   }
 
@@ -1721,18 +1932,24 @@ async function createEvent() {
 }
 
 
+// ======================================================
+// MOSTRAR EVENTOS
+// ======================================================
 
-// ======================================================
-// RENDER EVENTS
-// ======================================================
 
 function renderAdminEvents(match) {
 
   const container =
-    document
-      .getElementById(
-        "adminEventsList"
-      );
+    document.getElementById(
+      "adminEventsList"
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
 
 
   const list =
@@ -1747,18 +1964,20 @@ function renderAdminEvents(match) {
           )
       )
       .sort(
-        (a,b) =>
-          b.minute -
-          a.minute
+        (a, b) =>
+          Number(b.minute) -
+          Number(a.minute)
       );
 
 
   if (!list.length) {
 
     container.innerHTML = `
+
       <div class="admin-empty">
         No hay eventos cargados.
       </div>
+
     `;
 
     return;
@@ -1766,7 +1985,8 @@ function renderAdminEvents(match) {
   }
 
 
-  container.innerHTML = "";
+  container.innerHTML =
+    "";
 
 
   list.forEach(event => {
@@ -1784,22 +2004,37 @@ function renderAdminEvents(match) {
     item.innerHTML = `
 
       <div class="admin-event-icon">
-        ${eventIcon(event.event_type)}
+
+        ${eventIcon(
+          event.event_type
+        )}
+
       </div>
+
 
       <div class="admin-event-info">
 
         <strong>
+
           ${event.player_name || "Evento"}
+
         </strong>
 
+
         <span>
-          ${teamName(event.team_id)}
+
+          ${teamName(
+            event.team_id
+          )}
+
           ·
+
           ${event.minute}'
+
         </span>
 
       </div>
+
 
       <button
         class="admin-delete-small"
@@ -1816,10 +2051,13 @@ function renderAdminEvents(match) {
       )
       .addEventListener(
         "click",
-        () =>
+        () => {
+
           deleteEvent(
             event
-          )
+          );
+
+        }
       );
 
 
@@ -1832,10 +2070,10 @@ function renderAdminEvents(match) {
 }
 
 
+// ======================================================
+// ELIMINAR EVENTO
+// ======================================================
 
-// ======================================================
-// DELETE EVENT
-// ======================================================
 
 async function deleteEvent(event) {
 
@@ -1846,7 +2084,9 @@ async function deleteEvent(event) {
 
 
   if (!confirmed) {
+
     return;
+
   }
 
 
@@ -1858,7 +2098,9 @@ async function deleteEvent(event) {
     error
   } =
     await supabaseClient
-      .from("match_events")
+      .from(
+        "match_events"
+      )
       .delete()
       .eq(
         "id",
@@ -1868,38 +2110,56 @@ async function deleteEvent(event) {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error eliminando evento:",
+      error
+    );
+
 
     return;
 
   }
 
 
+  // Si era gol, restarlo.
+
   if (
     event.event_type ===
-    "goal" &&
+      "goal" &&
     match
   ) {
 
     const field =
-      Number(event.team_id) ===
-      Number(match.home_team_id)
+      Number(
+        event.team_id
+      ) ===
+      Number(
+        match.home_team_id
+      )
 
         ? "home_score"
 
         : "away_score";
 
 
+    const newScore =
+      Math.max(
+
+        0,
+
+        Number(
+          match[field] ||
+          0
+        ) - 1
+
+      );
+
+
     await supabaseClient
       .from("matches")
       .update({
         [field]:
-          Math.max(
-            0,
-            Number(
-              match[field] || 0
-            ) - 1
-          )
+          newScore
       })
       .eq(
         "id",
@@ -1914,10 +2174,10 @@ async function deleteEvent(event) {
 }
 
 
+// ======================================================
+// FINALIZAR PARTIDO
+// ======================================================
 
-// ======================================================
-// FINISH
-// ======================================================
 
 async function finishMatch() {
 
@@ -1928,7 +2188,9 @@ async function finishMatch() {
 
 
   if (!confirmed) {
+
     return;
+
   }
 
 
@@ -1937,12 +2199,16 @@ async function finishMatch() {
 
 
   if (!match) {
+
     return;
+
   }
 
 
   const seconds =
-    getLiveSeconds(match);
+    getLiveSeconds(
+      match
+    );
 
 
   await updateMatch({
@@ -1964,7 +2230,25 @@ async function finishMatch() {
 }
 
 
+// ======================================================
+// REABRIR PARTIDO
+// ======================================================
+
+
 async function reopenMatch() {
+
+  const confirmed =
+    confirm(
+      "¿Reabrir este partido?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
 
   await updateMatch({
 
@@ -1982,43 +2266,64 @@ async function reopenMatch() {
 }
 
 
+// ======================================================
+// CREAR PARTIDOS
+// ======================================================
 
-// ======================================================
-// MATCH MANAGEMENT
-// ======================================================
 
 function setupMatchEvents() {
 
-  document
-    .getElementById(
+  const sportSelect =
+    document.getElementById(
       "newMatchSport"
-    )
-    .addEventListener(
+    );
+
+
+  if (sportSelect) {
+
+    sportSelect.addEventListener(
       "change",
       refreshCreateTeamSelectors
     );
 
+  }
 
-  document
-    .getElementById(
+
+  const button =
+    document.getElementById(
       "createMatchButton"
-    )
-    .addEventListener(
+    );
+
+
+  if (button) {
+
+    button.addEventListener(
       "click",
       createMatch
     );
+
+  }
 
 }
 
 
 function refreshCreateTeamSelectors() {
 
+  const sportElement =
+    document.getElementById(
+      "newMatchSport"
+    );
+
+
+  if (!sportElement) {
+
+    return;
+
+  }
+
+
   const sport =
-    document
-      .getElementById(
-        "newMatchSport"
-      )
-      .value;
+    sportElement.value;
 
 
   fillTeamSelect(
@@ -2033,6 +2338,11 @@ function refreshCreateTeamSelectors() {
   );
 
 }
+
+
+// ======================================================
+// CREAR PARTIDO
+// ======================================================
 
 
 async function createMatch() {
@@ -2079,7 +2389,9 @@ async function createMatch() {
   }
 
 
-  if (home === away) {
+  if (
+    home === away
+  ) {
 
     alert(
       "Los equipos deben ser distintos."
@@ -2156,25 +2468,35 @@ async function createMatch() {
 
         period:
           sport === "padel"
+
             ? "SET 1"
+
             : "1T",
 
         elapsed_seconds:
           0,
 
         clock_running:
-          false
+          false,
+
+        clock_started_at:
+          null
 
       });
 
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error creando partido:",
+      error
+    );
+
 
     alert(
       "No se pudo crear el partido."
     );
+
 
     return;
 
@@ -2183,6 +2505,7 @@ async function createMatch() {
 
   await loadEverything();
 
+
   alert(
     "Partido creado."
   );
@@ -2190,29 +2513,43 @@ async function createMatch() {
 }
 
 
+// ======================================================
+// LISTA DE PARTIDOS
+// ======================================================
 
-// ======================================================
-// MATCH LIST
-// ======================================================
 
 function renderMatchesList() {
 
   const container =
-    document
-      .getElementById(
-        "matchesAdminList"
-      );
+    document.getElementById(
+      "matchesAdminList"
+    );
 
 
-  container.innerHTML = "";
+  if (!container) {
+
+    return;
+
+  }
 
 
-  if (!adminMatches.length) {
+  container.innerHTML =
+    "";
 
-    container.innerHTML =
-      `<div class="admin-empty">
+
+  if (
+    !adminMatches.length
+  ) {
+
+    container.innerHTML = `
+
+      <div class="admin-empty">
+
         No hay partidos.
-      </div>`;
+
+      </div>
+
+    `;
 
     return;
 
@@ -2231,35 +2568,78 @@ function renderMatchesList() {
       "admin-list-card";
 
 
+    const sportIcon =
+      match.sport === "padel"
+
+        ? "🎾"
+
+        : "⚽";
+
+
+    const time =
+      match.start_time
+        ?.slice(0,5) ||
+      "--:--";
+
+
     card.innerHTML = `
 
       <div class="admin-list-main">
 
         <span>
-          ${match.sport === "padel" ? "🎾" : "⚽"}
-          ${match.start_time?.slice(0,5) || "--:--"}
+
+          ${sportIcon}
+
+          ${time}
+
         </span>
 
+
         <strong>
-          ${teamName(match.home_team_id)}
+
+          ${teamName(
+            match.home_team_id
+          )}
+
           vs
-          ${teamName(match.away_team_id)}
+
+          ${teamName(
+            match.away_team_id
+          )}
+
         </strong>
 
+
         <small>
+
           ${match.court || "Sin cancha"}
-          ${match.group_name ? " · " + match.group_name : ""}
+
+          ${
+            match.group_name
+
+              ? " · " +
+                match.group_name
+
+              : ""
+          }
+
         </small>
 
       </div>
 
+
       <div class="admin-list-actions">
 
-        <button class="edit-match">
+        <button
+          class="edit-match"
+        >
           Editar
         </button>
 
-        <button class="delete-match">
+
+        <button
+          class="delete-match"
+        >
           Eliminar
         </button>
 
@@ -2280,12 +2660,18 @@ function renderMatchesList() {
             match.id;
 
 
-          document
-            .getElementById(
+          const sport =
+            document.getElementById(
               "controlSport"
-            )
-            .value =
+            );
+
+
+          if (sport) {
+
+            sport.value =
               match.sport;
+
+          }
 
 
           openAdminSection(
@@ -2307,10 +2693,13 @@ function renderMatchesList() {
       )
       .addEventListener(
         "click",
-        () =>
+        () => {
+
           deleteMatch(
             match
-          )
+          );
+
+        }
       );
 
 
@@ -2323,6 +2712,11 @@ function renderMatchesList() {
 }
 
 
+// ======================================================
+// ELIMINAR PARTIDO
+// ======================================================
+
+
 async function deleteMatch(match) {
 
   const confirmed =
@@ -2332,7 +2726,9 @@ async function deleteMatch(match) {
 
 
   if (!confirmed) {
+
     return;
+
   }
 
 
@@ -2350,41 +2746,59 @@ async function deleteMatch(match) {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error eliminando partido:",
+      error
+    );
+
 
     alert(
-      "No se pudo eliminar."
+      "No se pudo eliminar el partido."
     );
+
 
     return;
 
   }
 
 
-  selectedMatchId = null;
+  selectedMatchId =
+    null;
+
 
   await loadEverything();
 
 }
 
 
+// ======================================================
+// EQUIPOS
+// ======================================================
 
-// ======================================================
-// TEAM MANAGEMENT
-// ======================================================
 
 function setupTeamEvents() {
 
-  document
-    .getElementById(
+  const button =
+    document.getElementById(
       "createTeamButton"
-    )
-    .addEventListener(
+    );
+
+
+  if (button) {
+
+    button.addEventListener(
       "click",
       createTeam
     );
 
+  }
+
 }
+
+
+// ======================================================
+// CREAR EQUIPO
+// ======================================================
 
 
 async function createTeam() {
@@ -2401,7 +2815,7 @@ async function createTeam() {
   if (!name) {
 
     alert(
-      "Ingresá el nombre."
+      "Ingresá el nombre del equipo."
     );
 
     return;
@@ -2438,11 +2852,16 @@ async function createTeam() {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error creando equipo:",
+      error
+    );
+
 
     alert(
       "No se pudo crear el equipo."
     );
+
 
     return;
 
@@ -2457,26 +2876,60 @@ async function createTeam() {
       "";
 
 
+  document
+    .getElementById(
+      "newTeamGroup"
+    )
+    .value =
+      "";
+
+
   await loadEverything();
 
 }
 
 
+// ======================================================
+// LISTA DE EQUIPOS
+// ======================================================
 
-// ======================================================
-// TEAM LIST
-// ======================================================
 
 function renderTeamsList() {
 
   const container =
-    document
-      .getElementById(
-        "teamsAdminList"
-      );
+    document.getElementById(
+      "teamsAdminList"
+    );
 
 
-  container.innerHTML = "";
+  if (!container) {
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    !adminTeams.length
+  ) {
+
+    container.innerHTML = `
+
+      <div class="admin-empty">
+
+        No hay equipos.
+
+      </div>
+
+    `;
+
+    return;
+
+  }
 
 
   adminTeams.forEach(team => {
@@ -2496,15 +2949,30 @@ function renderTeamsList() {
       <div class="admin-list-main">
 
         <span>
-          ${team.sport === "padel" ? "🎾 Pádel" : "⚽ Fútbol"}
+
+          ${
+            team.sport ===
+            "padel"
+
+              ? "🎾 Pádel"
+
+              : "⚽ Fútbol"
+          }
+
         </span>
 
+
         <strong>
+
           ${team.name}
+
         </strong>
 
+
         <small>
+
           ${team.group_name || "Sin grupo"}
+
         </small>
 
       </div>
@@ -2512,11 +2980,16 @@ function renderTeamsList() {
 
       <div class="admin-list-actions">
 
-        <button class="edit-team">
+        <button
+          class="edit-team"
+        >
           Editar
         </button>
 
-        <button class="delete-team">
+
+        <button
+          class="delete-team"
+        >
           Eliminar
         </button>
 
@@ -2531,8 +3004,13 @@ function renderTeamsList() {
       )
       .addEventListener(
         "click",
-        () =>
-          editTeam(team)
+        () => {
+
+          editTeam(
+            team
+          );
+
+        }
       );
 
 
@@ -2542,8 +3020,13 @@ function renderTeamsList() {
       )
       .addEventListener(
         "click",
-        () =>
-          deleteTeam(team)
+        () => {
+
+          deleteTeam(
+            team
+          );
+
+        }
       );
 
 
@@ -2556,10 +3039,10 @@ function renderTeamsList() {
 }
 
 
+// ======================================================
+// EDITAR EQUIPO
+// ======================================================
 
-// ======================================================
-// EDIT TEAM
-// ======================================================
 
 async function editTeam(team) {
 
@@ -2583,12 +3066,17 @@ async function editTeam(team) {
   const group =
     prompt(
       "Grupo:",
-      team.group_name || ""
+      team.group_name ||
+      ""
     );
 
 
-  if (group === null) {
+  if (
+    group === null
+  ) {
+
     return;
+
   }
 
 
@@ -2614,7 +3102,16 @@ async function editTeam(team) {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error editando equipo:",
+      error
+    );
+
+
+    alert(
+      "No se pudo editar el equipo."
+    );
+
 
     return;
 
@@ -2626,10 +3123,10 @@ async function editTeam(team) {
 }
 
 
+// ======================================================
+// ELIMINAR EQUIPO
+// ======================================================
 
-// ======================================================
-// DELETE TEAM
-// ======================================================
 
 async function deleteTeam(team) {
 
@@ -2640,7 +3137,9 @@ async function deleteTeam(team) {
 
 
   if (!confirmed) {
+
     return;
+
   }
 
 
@@ -2658,11 +3157,16 @@ async function deleteTeam(team) {
 
   if (error) {
 
-    console.error(error);
+    console.error(
+      "Error eliminando equipo:",
+      error
+    );
+
 
     alert(
-      "No se pudo eliminar. Puede estar utilizado en un partido."
+      "No se pudo eliminar el equipo."
     );
+
 
     return;
 
