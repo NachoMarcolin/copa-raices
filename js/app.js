@@ -3572,3 +3572,265 @@ function renderStandings() {
   }
 
 }
+
+// ======================================================
+// GOLEADORES CON EQUIPO
+// ======================================================
+
+
+function getPublicTeamNameById(
+  teamId
+) {
+
+  for (
+    const match of matches
+  ) {
+
+    if (
+      Number(
+        match.home_team?.id
+      ) ===
+      Number(
+        teamId
+      )
+    ) {
+
+      return (
+        match.home_team?.name ||
+        "Equipo"
+      );
+
+    }
+
+
+    if (
+      Number(
+        match.away_team?.id
+      ) ===
+      Number(
+        teamId
+      )
+    ) {
+
+      return (
+        match.away_team?.name ||
+        "Equipo"
+      );
+
+    }
+
+  }
+
+
+  return "Equipo";
+
+}
+
+
+// ======================================================
+// RENDER GOLEADORES
+// ======================================================
+
+
+function renderScorers() {
+
+  const container =
+    document.getElementById(
+      "scorersContent"
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  if (
+    currentSport ===
+    "padel"
+  ) {
+
+    container.innerHTML =
+      "";
+
+    return;
+
+  }
+
+
+  const footballMatchIds =
+    new Set(
+
+      matches
+
+        .filter(
+          match =>
+            match.sport ===
+            "football"
+        )
+
+        .map(
+          match =>
+            Number(
+              match.id
+            )
+        )
+
+    );
+
+
+  const scorers =
+    {};
+
+
+  events
+
+    .filter(
+      event =>
+        event.event_type ===
+        "goal"
+    )
+
+    .filter(
+      event =>
+        footballMatchIds.has(
+          Number(
+            event.match_id
+          )
+        )
+    )
+
+    .forEach(
+      event => {
+
+        const player =
+          event.player_name ||
+          "Jugador";
+
+
+        const teamId =
+          Number(
+            event.team_id
+          );
+
+
+        const key =
+          `${player}__${teamId}`;
+
+
+        if (
+          !scorers[key]
+        ) {
+
+          scorers[key] = {
+
+            player,
+
+            teamId,
+
+            goals:
+              0
+
+          };
+
+        }
+
+
+        scorers[key].goals++;
+
+      }
+    );
+
+
+  const ranking =
+    Object
+
+      .values(
+        scorers
+      )
+
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          b.goals -
+          a.goals
+      );
+
+
+  if (!ranking.length) {
+
+    container.innerHTML = `
+
+      <div class="empty-state">
+
+        <strong>
+          Todavía no hay goleadores
+        </strong>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    ranking
+
+      .map(
+        (
+          scorer,
+          index
+        ) => `
+
+          <article class="scorer-card">
+
+
+            <div class="scorer-position">
+
+              ${index + 1}
+
+            </div>
+
+
+            <div>
+
+              <strong>
+
+                ${scorer.player}
+
+              </strong>
+
+
+              <small>
+
+                ${getPublicTeamNameById(
+                  scorer.teamId
+                )}
+
+              </small>
+
+            </div>
+
+
+            <div class="scorer-goals">
+
+              ${scorer.goals}
+
+            </div>
+
+
+          </article>
+
+        `
+      )
+
+      .join("");
+
+}
