@@ -3834,3 +3834,215 @@ function renderScorers() {
       .join("");
 
 }
+
+// ======================================================
+// NUEVO TANTEADOR PÁDEL
+// ESTILO TENIS / PÁDEL
+// ======================================================
+
+function padelLiveCardHTML(
+  match
+) {
+
+  const point =
+    padelCurrentScore(
+      match
+    );
+
+
+  const homeGames =
+    padelHomeGames(
+      match
+    );
+
+
+  const awayGames =
+    padelAwayGames(
+      match
+    );
+
+
+  const specialState =
+    match.padel_tiebreak
+
+      ? "TIE-BREAK"
+
+      : (
+          Number(
+            match.padel_home_points || 0
+          ) === 3
+          &&
+          Number(
+            match.padel_away_points || 0
+          ) === 3
+        )
+
+        ? "PUNTO DE ORO"
+
+        : "SET ÚNICO";
+
+
+  return `
+
+    <article class="
+      live-match-card
+      padel-live-card
+    ">
+
+
+      <div class="
+        match-card-top
+        padel-card-top
+      ">
+
+        <span class="live-label">
+          EN VIVO
+        </span>
+
+
+        <span class="match-location">
+
+          ${match.court || "Cancha"}
+
+        </span>
+
+
+        <span class="match-clock">
+
+          SET ÚNICO · ${getClock(match)}
+
+        </span>
+
+      </div>
+
+
+      <div class="
+        padel-scoreboard
+      ">
+
+
+        <div class="
+          padel-scoreboard-title
+        ">
+
+          ${specialState}
+
+        </div>
+
+
+        <div class="
+          padel-scoreboard-header
+        ">
+
+          <span></span>
+
+          <span>
+            GAMES
+          </span>
+
+          <span>
+            PUNTOS
+          </span>
+
+        </div>
+
+
+        <div class="
+          padel-scoreboard-row
+        ">
+
+          <div class="
+            padel-scoreboard-player
+          ">
+
+            <span class="
+              padel-player-dot
+            ">
+            </span>
+
+
+            <strong>
+
+              ${teamName(
+                match.home_team
+              )}
+
+            </strong>
+
+          </div>
+
+
+          <strong class="
+            padel-scoreboard-game
+          ">
+
+            ${homeGames}
+
+          </strong>
+
+
+          <strong class="
+            padel-scoreboard-point
+          ">
+
+            ${point.home}
+
+          </strong>
+
+        </div>
+
+
+        <div class="
+          padel-scoreboard-row
+        ">
+
+          <div class="
+            padel-scoreboard-player
+          ">
+
+            <span class="
+              padel-player-dot
+              away
+            ">
+            </span>
+
+
+            <strong>
+
+              ${teamName(
+                match.away_team
+              )}
+
+            </strong>
+
+          </div>
+
+
+          <strong class="
+            padel-scoreboard-game
+          ">
+
+            ${awayGames}
+
+          </strong>
+
+
+          <strong class="
+            padel-scoreboard-point
+          ">
+
+            ${point.away}
+
+          </strong>
+
+        </div>
+
+
+      </div>
+
+
+    </article>
+
+  `;
+
+}

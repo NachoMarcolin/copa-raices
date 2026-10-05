@@ -3221,3 +3221,300 @@ th:nth-child(2) {
   }
 
 }
+
+/* =====================================================
+   NUEVO TANTEADOR PÁDEL
+===================================================== */
+
+
+.padel-live-card {
+  overflow: hidden;
+}
+
+
+.padel-card-top {
+  margin-bottom: 18px;
+}
+
+
+/* CONTENEDOR */
+
+.padel-scoreboard {
+  width: 100%;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    #cbdceb;
+
+  border-radius:
+    10px;
+
+  background:
+    #ffffff;
+}
+
+
+/* TITULO */
+
+.padel-scoreboard-title {
+  padding:
+    7px 12px;
+
+  background:
+    var(--blue);
+
+  color:
+    #ffffff;
+
+  font-size:
+    10px;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    .8px;
+
+  text-align:
+    center;
+}
+
+
+/* CABECERA */
+
+.padel-scoreboard-header {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    58px
+    68px;
+
+  align-items:
+    center;
+
+  min-height:
+    28px;
+
+  background:
+    #edf5fb;
+
+  border-bottom:
+    1px solid
+    #d7e4ee;
+
+  color:
+    var(--text-soft);
+
+  font-size:
+    8px;
+
+  font-weight:
+    900;
+
+  text-align:
+    center;
+
+  letter-spacing:
+    .5px;
+}
+
+
+/* FILAS */
+
+.padel-scoreboard-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    58px
+    68px;
+
+  align-items:
+    stretch;
+
+  min-height:
+    48px;
+
+  border-bottom:
+    1px solid
+    #dce7ef;
+}
+
+
+.padel-scoreboard-row:last-child {
+  border-bottom:
+    0;
+}
+
+
+/* NOMBRE JUGADOR */
+
+.padel-scoreboard-player {
+  min-width:
+    0;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    9px;
+
+  padding:
+    10px 12px;
+
+  color:
+    var(--navy);
+}
+
+
+.padel-scoreboard-player strong {
+  min-width:
+    0;
+
+  overflow:
+    hidden;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+
+  font-size:
+    13px;
+
+  font-weight:
+    900;
+}
+
+
+/* INDICADOR JUGADOR */
+
+.padel-player-dot {
+  width:
+    9px;
+
+  height:
+    9px;
+
+  flex-shrink:
+    0;
+
+  border-radius:
+    50%;
+
+  background:
+    var(--sky);
+}
+
+
+.padel-player-dot.away {
+  background:
+    var(--gold);
+}
+
+
+/* GAMES */
+
+.padel-scoreboard-game {
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  border-left:
+    1px solid
+    #dce7ef;
+
+  color:
+    var(--navy);
+
+  font-size:
+    19px;
+
+  font-weight:
+    950;
+}
+
+
+/* PUNTOS */
+
+.padel-scoreboard-point {
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  border-left:
+    1px solid
+    #dce7ef;
+
+  background:
+    var(--navy);
+
+  color:
+    #ffffff;
+
+  font-size:
+    18px;
+
+  font-weight:
+    950;
+}
+
+
+/* PUNTO DE ORO */
+
+.padel-scoreboard-title {
+  transition:
+    background .2s ease;
+}
+
+
+/* MOBILE */
+
+@media (
+  max-width: 540px
+) {
+
+  .padel-scoreboard-header,
+  .padel-scoreboard-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      54px
+      62px;
+  }
+
+
+  .padel-scoreboard-player {
+    padding:
+      9px 10px;
+  }
+
+
+  .padel-scoreboard-player strong {
+    font-size:
+      12px;
+  }
+
+
+  .padel-scoreboard-game {
+    font-size:
+      18px;
+  }
+
+
+  .padel-scoreboard-point {
+    font-size:
+      17px;
+  }
+
+}
