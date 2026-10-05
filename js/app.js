@@ -1368,27 +1368,49 @@ function renderFixture() {
 
         <div class="fixture-teams">
 
-          <span>
 
-            ${teamName(
-              match.home_team
-            )}
+          <div class="fixture-team-side">
 
-          </span>
+            <span class="fixture-team-name">
+              ${teamName(match.home_team)}
+            </span>
+
+            ${
+              match.status !== "pending"
+                ? `
+                  <strong class="fixture-team-score">
+                    ${match.home_score}
+                  </strong>
+                `
+                : ""
+            }
+
+          </div>
 
 
-          <span>
+          <span class="fixture-vs">
             vs
           </span>
 
 
-          <span>
+          <div class="fixture-team-side">
 
-            ${teamName(
-              match.away_team
-            )}
+            <span class="fixture-team-name">
+              ${teamName(match.away_team)}
+            </span>
 
-          </span>
+            ${
+              match.status !== "pending"
+                ? `
+                  <strong class="fixture-team-score">
+                    ${match.away_score}
+                  </strong>
+                `
+                : ""
+            }
+
+          </div>
+
 
         </div>
 
@@ -1397,14 +1419,10 @@ function renderFixture() {
 
           ${
             match.status === "pending"
-
               ? "Próximo"
-
-              :
-
-              `${match.home_score}
-               -
-               ${match.away_score}`
+              : match.status === "live"
+                ? "EN VIVO"
+                : "FINAL"
           }
 
         </div>
