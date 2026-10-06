@@ -688,9 +688,7 @@ function renderMatchSelector() {
     !sportSelect ||
     !select
   ) {
-
     return;
-
   }
 
 
@@ -698,12 +696,106 @@ function renderMatchSelector() {
     sportSelect.value;
 
 
+  const statusPriority = {
+    pending: 0,
+    live: 1,
+    finished: 2
+  };
+
+
   const filtered =
-    adminMatches.filter(
-      match =>
-        match.sport ===
-        sport
-    );
+    adminMatches
+
+      .filter(
+        match =>
+          match.sport === sport
+      )
+
+      .sort(
+        (a, b) => {
+
+          const priorityA =
+            statusPriority[
+              a.status
+            ] ?? 3;
+
+
+          const priorityB =
+            statusPriority[
+              b.status
+            ] ?? 3;
+
+
+          // 1. Pendientes
+          // 2. En vivo
+          // 3. Finalizados
+
+          if (
+            priorityA !==
+            priorityB
+          ) {
+
+            return (
+              priorityA -
+              priorityB
+            );
+
+          }
+
+
+          // Dentro de pendientes:
+          // horario más cercano primero
+
+          if (
+            a.status === "pending"
+          ) {
+
+            return String(
+              a.start_time || "99:99"
+            )
+            .localeCompare(
+              String(
+                b.start_time || "99:99"
+              )
+            );
+
+          }
+
+
+          // Dentro de partidos en vivo:
+          // horario más reciente primero
+
+          if (
+            a.status === "live"
+          ) {
+
+            return String(
+              b.start_time || ""
+            )
+            .localeCompare(
+              String(
+                a.start_time || ""
+              )
+            );
+
+          }
+
+
+          // Finalizados:
+          // los más recientes primero,
+          // pero siempre debajo de los pendientes.
+
+          return String(
+            b.start_time || ""
+          )
+          .localeCompare(
+            String(
+              a.start_time || ""
+            )
+          );
+
+        }
+      );
 
 
   select.innerHTML =
@@ -771,15 +863,61 @@ function renderMatchSelector() {
 
       const time =
         match.start_time
-          ?.slice(
-            0,
-            5
-          ) ||
+          ?.slice(0, 5) ||
         "--:--";
 
 
+      const round =
+        String(
+          match.round_name || ""
+        ).trim();
+
+
+      let statusText =
+        "";
+
+
+      if (
+        match.status ===
+        "live"
+      ) {
+
+        statusText =
+          " 🔴 EN VIVO";
+
+      }
+
+
+      else if (
+        match.status ===
+        "finished"
+      ) {
+
+        statusText =
+          " · Terminado";
+
+      }
+
+
       option.textContent =
-        `${time} · ${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`;
+
+        `${time} · `
+
+        +
+
+        (
+          round
+            ? `${round} · `
+            : ""
+        )
+
+        +
+
+        `${teamName(match.home_team_id)} vs ${teamName(match.away_team_id)}`
+
+        +
+
+        statusText;
 
 
       if (
@@ -4993,5 +5131,1295 @@ function setupCollapsibleMatchData() {
     );
 
   }
+
+}
+
+// ======================================================
+// PLAYOFFS AUTOMÁTICOS DE FÚTBOL
+// FORMATO COPA RAÍCES
+// 1° A vs 2° B
+// 1° B vs 2° A
+// FINAL: ganador SF1 vs ganador SF2
+// ======================================================
+
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    setupFootballPlayoffsAdmin();
+
+  }
+);
+
+
+// ======================================================
+// CREAR PANEL EN ADMIN
+// ======================================================
+
+function setupFootballPlayoffsAdmin() {
+
+  if (
+    document.getElementById(
+      "footballPlayoffsAdminCard"
+    )
+  ) {
+    return;
+  }
+
+
+  const section =
+    document.getElementById(
+      "admin-matches"
+    );
+
+
+  if (!section) {
+    return;
+  }
+
+
+  const createMatchCard =
+    section.querySelector(
+      ".admin-card"
+    );
+
+
+  if (!createMatchCard) {
+    return;
+  }
+
+
+  const card =
+    document.createElement(
+      "div"
+    );
+
+
+  card.id =
+    "footballPlayoffsAdminCard";
+
+
+  card.className =
+    "admin-card";
+
+
+  card.style.marginTop =
+    "22px";
+
+
+  card.innerHTML = `
+
+    <div class="admin-block-heading">
+
+      <h2>
+        Playoffs de fútbol
+      </h2>
+
+    </div>
+
+
+    <p
+      style="
+        margin-bottom:16px;
+        color:var(--text-soft);
+        font-size:13px;
+        line-height:1.5;
+      "
+    >
+      Genera automáticamente las semifinales
+      con los 2 primeros de cada grupo y,
+      cuando ambas semifinales terminen,
+      genera la final.
+    </p>
+
+
+    <button
+      id="generateFootballPlayoffs"
+      class="
+        admin-primary-button
+        admin-full-button
+      "
+    >
+      Generar / actualizar playoffs
+    </button>
+
+
+    <div
+      id="footballPlayoffAdminStatus"
+      style="
+        margin-top:14px;
+        font-size:12px;
+        color:var(--text-soft);
+      "
+    >
+    </div>
+
+  `;
+
+
+  createMatchCard
+    .insertAdjacentElement(
+      "afterend",
+      card
+    );
+
+
+  document
+    .getElementById(
+      "generateFootballPlayoffs"
+    )
+    .addEventListener(
+      "click",
+      generateFootballPlayoffs
+    );
+
+
+  renderFootballPlayoffAdminStatus();
+
+}
+
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+function normalizeAdminGroup(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+    .trim()
+    .replace(
+      /^grupo\s+/i,
+      ""
+    )
+    .toUpperCase();
+
+}
+
+
+function isAdminFootballPlayoff(
+  match
+) {
+
+  if (
+    match.sport !==
+    "football"
+  ) {
+    return false;
+  }
+
+
+  const round =
+    String(
+      match.round_name || ""
+    )
+    .toLowerCase();
+
+
+  return (
+    round.includes(
+      "semi"
+    )
+    ||
+    (
+      round.includes(
+        "final"
+      )
+      &&
+      !round.includes(
+        "fase"
+      )
+    )
+  );
+
+}
+
+
+function adminFootballGroupMatches() {
+
+  return adminMatches.filter(
+    match =>
+      match.sport === "football"
+      &&
+      !isAdminFootballPlayoff(
+        match
+      )
+  );
+
+}
+
+
+function getAdminMatchGroup(
+  match
+) {
+
+  if (
+    match.group_name
+  ) {
+
+    return normalizeAdminGroup(
+      match.group_name
+    );
+
+  }
+
+
+  const home =
+    getTeam(
+      match.home_team_id
+    );
+
+
+  const away =
+    getTeam(
+      match.away_team_id
+    );
+
+
+  return normalizeAdminGroup(
+    home?.group_name ||
+    away?.group_name ||
+    ""
+  );
+
+}
+
+
+// ======================================================
+// TABLA DE UN GRUPO
+// ======================================================
+
+function calculateAdminFootballGroupStandings(
+  groupName
+) {
+
+  const table =
+    {};
+
+
+  const groupTeams =
+    adminTeams.filter(
+      team =>
+        team.sport ===
+          "football"
+        &&
+        normalizeAdminGroup(
+          team.group_name
+        ) ===
+          normalizeAdminGroup(
+            groupName
+          )
+    );
+
+
+  groupTeams.forEach(
+    team => {
+
+      table[
+        team.id
+      ] = {
+
+        id:
+          team.id,
+
+        name:
+          team.name,
+
+        pj:
+          0,
+
+        pg:
+          0,
+
+        pe:
+          0,
+
+        pp:
+          0,
+
+        gf:
+          0,
+
+        gc:
+          0,
+
+        dg:
+          0,
+
+        pts:
+          0
+
+      };
+
+    }
+  );
+
+
+  adminFootballGroupMatches()
+
+    .filter(
+      match =>
+        getAdminMatchGroup(
+          match
+        ) ===
+          normalizeAdminGroup(
+            groupName
+          )
+    )
+
+    .filter(
+      match =>
+        match.status ===
+        "finished"
+    )
+
+    .forEach(
+      match => {
+
+        const home =
+          table[
+            match.home_team_id
+          ];
+
+
+        const away =
+          table[
+            match.away_team_id
+          ];
+
+
+        if (
+          !home ||
+          !away
+        ) {
+          return;
+        }
+
+
+        const h =
+          Number(
+            match.home_score ||
+            0
+          );
+
+
+        const a =
+          Number(
+            match.away_score ||
+            0
+          );
+
+
+        home.pj++;
+
+        away.pj++;
+
+
+        home.gf +=
+          h;
+
+        home.gc +=
+          a;
+
+
+        away.gf +=
+          a;
+
+        away.gc +=
+          h;
+
+
+        if (
+          h > a
+        ) {
+
+          home.pg++;
+
+          home.pts +=
+            3;
+
+          away.pp++;
+
+        }
+
+        else if (
+          a > h
+        ) {
+
+          away.pg++;
+
+          away.pts +=
+            3;
+
+          home.pp++;
+
+        }
+
+        else {
+
+          home.pe++;
+
+          away.pe++;
+
+          home.pts++;
+
+          away.pts++;
+
+        }
+
+      }
+    );
+
+
+  return Object
+
+    .values(
+      table
+    )
+
+    .map(
+      team => {
+
+        team.dg =
+          team.gf -
+          team.gc;
+
+
+        return team;
+
+      }
+    )
+
+    .sort(
+      (
+        a,
+        b
+      ) =>
+
+        b.pts -
+        a.pts
+
+        ||
+
+        b.dg -
+        a.dg
+
+        ||
+
+        b.gf -
+        a.gf
+
+        ||
+
+        a.name.localeCompare(
+          b.name,
+          "es"
+        )
+    );
+
+}
+
+
+// ======================================================
+// GRUPO TERMINADO
+// ======================================================
+
+function isAdminFootballGroupFinished(
+  groupName
+) {
+
+  const teams =
+    adminTeams.filter(
+      team =>
+        team.sport ===
+          "football"
+        &&
+        normalizeAdminGroup(
+          team.group_name
+        ) ===
+          normalizeAdminGroup(
+            groupName
+          )
+    );
+
+
+  if (
+    teams.length < 2
+  ) {
+
+    return false;
+
+  }
+
+
+  const expectedMatches =
+    (
+      teams.length *
+      (
+        teams.length - 1
+      )
+    ) / 2;
+
+
+  const groupMatches =
+    adminFootballGroupMatches()
+      .filter(
+        match =>
+          getAdminMatchGroup(
+            match
+          ) ===
+            normalizeAdminGroup(
+              groupName
+            )
+      );
+
+
+  const finished =
+    groupMatches.filter(
+      match =>
+        match.status ===
+        "finished"
+    ).length;
+
+
+  return (
+    groupMatches.length >=
+      expectedMatches
+    &&
+    finished >=
+      expectedMatches
+  );
+
+}
+
+
+// ======================================================
+// BUSCAR RONDA
+// ======================================================
+
+function findAdminFootballRound(
+  name
+) {
+
+  return adminMatches.find(
+    match =>
+      match.sport ===
+        "football"
+      &&
+      String(
+        match.round_name || ""
+      )
+      .trim()
+      .toLowerCase() ===
+        name.toLowerCase()
+  ) || null;
+
+}
+
+
+// ======================================================
+// CREAR / ACTUALIZAR PARTIDO PLAYOFF
+// ======================================================
+
+async function createOrUpdateFootballPlayoff(
+  {
+    round,
+    homeId,
+    awayId,
+    court,
+    time,
+    date = null
+  }
+) {
+
+  const existing =
+    findAdminFootballRound(
+      round
+    );
+
+
+  const payload = {
+
+    sport:
+      "football",
+
+    home_team_id:
+      homeId,
+
+    away_team_id:
+      awayId,
+
+    court:
+      String(
+        court
+      ),
+
+    group_name:
+      "",
+
+    round_name:
+      round,
+
+    match_date:
+      date,
+
+    start_time:
+      time,
+
+    period:
+      "1T"
+
+  };
+
+
+  // Si ya está jugándose o terminó,
+  // no cambiamos los participantes.
+
+  if (
+    existing &&
+    (
+      existing.status ===
+        "live"
+      ||
+      existing.status ===
+        "finished"
+    )
+  ) {
+
+    return existing;
+
+  }
+
+
+  if (existing) {
+
+    const {
+      error
+    } =
+      await supabaseClient
+
+        .from(
+          "matches"
+        )
+
+        .update({
+          ...payload,
+
+          home_score:
+            0,
+
+          away_score:
+            0,
+
+          status:
+            "pending",
+
+          elapsed_seconds:
+            0,
+
+          clock_running:
+            false,
+
+          clock_started_at:
+            null
+        })
+
+        .eq(
+          "id",
+          existing.id
+        );
+
+
+    if (error) {
+
+      throw error;
+
+    }
+
+
+    return existing;
+
+  }
+
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+
+      .from(
+        "matches"
+      )
+
+      .insert({
+
+        ...payload,
+
+        home_score:
+          0,
+
+        away_score:
+          0,
+
+        status:
+          "pending",
+
+        elapsed_seconds:
+          0,
+
+        clock_running:
+          false,
+
+        clock_started_at:
+          null
+
+      })
+
+      .select()
+      .single();
+
+
+  if (error) {
+
+    throw error;
+
+  }
+
+
+  return data;
+
+}
+
+
+// ======================================================
+// GANADOR
+// ======================================================
+
+function getAdminFootballWinnerId(
+  match
+) {
+
+  if (
+    !match ||
+    match.status !==
+      "finished"
+  ) {
+
+    return null;
+
+  }
+
+
+  const home =
+    Number(
+      match.home_score ||
+      0
+    );
+
+
+  const away =
+    Number(
+      match.away_score ||
+      0
+    );
+
+
+  if (
+    home > away
+  ) {
+
+    return Number(
+      match.home_team_id
+    );
+
+  }
+
+
+  if (
+    away > home
+  ) {
+
+    return Number(
+      match.away_team_id
+    );
+
+  }
+
+
+  return null;
+
+}
+
+
+// ======================================================
+// FECHA BASE
+// ======================================================
+
+function getFootballPlayoffDate() {
+
+  const datedMatches =
+    adminFootballGroupMatches()
+
+      .filter(
+        match =>
+          match.match_date
+      )
+
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          String(
+            b.match_date
+          )
+          .localeCompare(
+            String(
+              a.match_date
+            )
+          )
+      );
+
+
+  return (
+    datedMatches[0]
+      ?.match_date ||
+    null
+  );
+
+}
+
+
+// ======================================================
+// GENERAR PLAYOFFS
+// ======================================================
+
+async function generateFootballPlayoffs() {
+
+  const status =
+    document.getElementById(
+      "footballPlayoffAdminStatus"
+    );
+
+
+  const button =
+    document.getElementById(
+      "generateFootballPlayoffs"
+    );
+
+
+  if (button) {
+
+    button.disabled =
+      true;
+
+
+    button.textContent =
+      "Procesando...";
+
+  }
+
+
+  try {
+
+    const groups =
+      [
+        ...new Set(
+
+          adminTeams
+
+            .filter(
+              team =>
+                team.sport ===
+                  "football"
+              &&
+                team.group_name
+            )
+
+            .map(
+              team =>
+                normalizeAdminGroup(
+                  team.group_name
+                )
+            )
+
+        )
+      ]
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.localeCompare(
+            b,
+            "es"
+          )
+      );
+
+
+    if (
+      groups.length < 2
+    ) {
+
+      alert(
+        "Necesitás al menos 2 grupos de fútbol."
+      );
+
+      return;
+
+    }
+
+
+    const groupA =
+      groups[0];
+
+
+    const groupB =
+      groups[1];
+
+
+    if (
+      !isAdminFootballGroupFinished(
+        groupA
+      )
+      ||
+      !isAdminFootballGroupFinished(
+        groupB
+      )
+    ) {
+
+      alert(
+        "La fase de grupos todavía no terminó. Para generar las semifinales tienen que estar cargados y finalizados todos los partidos de ambos grupos."
+      );
+
+      return;
+
+    }
+
+
+    const tableA =
+      calculateAdminFootballGroupStandings(
+        groupA
+      );
+
+
+    const tableB =
+      calculateAdminFootballGroupStandings(
+        groupB
+      );
+
+
+    if (
+      tableA.length < 2 ||
+      tableB.length < 2
+    ) {
+
+      alert(
+        "No se pudieron determinar los 2 clasificados de cada grupo."
+      );
+
+      return;
+
+    }
+
+
+    const firstA =
+      tableA[0];
+
+
+    const secondA =
+      tableA[1];
+
+
+    const firstB =
+      tableB[0];
+
+
+    const secondB =
+      tableB[1];
+
+
+    const date =
+      getFootballPlayoffDate();
+
+
+    // =====================================
+    // SEMIFINAL 1
+    // 1° A vs 2° B
+    // Cancha 1
+    // 15:15
+    // =====================================
+
+    await createOrUpdateFootballPlayoff({
+
+      round:
+        "Semifinal 1",
+
+      homeId:
+        firstA.id,
+
+      awayId:
+        secondB.id,
+
+      court:
+        "1",
+
+      time:
+        "15:15:00",
+
+      date
+
+    });
+
+
+    // =====================================
+    // SEMIFINAL 2
+    // 1° B vs 2° A
+    // Cancha 2
+    // 15:15
+    // =====================================
+
+    await createOrUpdateFootballPlayoff({
+
+      round:
+        "Semifinal 2",
+
+      homeId:
+        firstB.id,
+
+      awayId:
+        secondA.id,
+
+      court:
+        "2",
+
+      time:
+        "15:15:00",
+
+      date
+
+    });
+
+
+    await loadEverything();
+
+
+    // =====================================
+    // FINAL
+    // Se crea solamente cuando
+    // terminaron ambas semifinales.
+    // =====================================
+
+    const sf1 =
+      findAdminFootballRound(
+        "Semifinal 1"
+      );
+
+
+    const sf2 =
+      findAdminFootballRound(
+        "Semifinal 2"
+      );
+
+
+    const winner1 =
+      getAdminFootballWinnerId(
+        sf1
+      );
+
+
+    const winner2 =
+      getAdminFootballWinnerId(
+        sf2
+      );
+
+
+    if (
+      winner1 &&
+      winner2
+    ) {
+
+      await createOrUpdateFootballPlayoff({
+
+        round:
+          "Final",
+
+        homeId:
+          winner1,
+
+        awayId:
+          winner2,
+
+        court:
+          "1",
+
+        time:
+          "16:00:00",
+
+        date
+
+      });
+
+
+      await loadEverything();
+
+
+      if (status) {
+
+        status.textContent =
+          "Semifinales y final actualizadas.";
+
+      }
+
+
+      alert(
+        "Playoffs actualizados. La final ya quedó generada con los ganadores de las semifinales."
+      );
+
+    }
+
+    else {
+
+      if (
+        sf1?.status ===
+          "finished"
+        &&
+        sf2?.status ===
+          "finished"
+        &&
+        (
+          !winner1 ||
+          !winner2
+        )
+      ) {
+
+        alert(
+          "Hay una semifinal empatada. Necesitamos definir el ganador antes de generar la final."
+        );
+
+      }
+
+      else {
+
+        if (status) {
+
+          status.textContent =
+            "Semifinales generadas. Cuando terminen, volvé a presionar este botón para generar la final.";
+
+        }
+
+
+        alert(
+          "Semifinales generadas correctamente."
+        );
+
+      }
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Error generando playoffs:",
+      error
+    );
+
+
+    alert(
+      "No se pudieron generar los playoffs."
+    );
+
+  }
+
+  finally {
+
+    if (button) {
+
+      button.disabled =
+        false;
+
+
+      button.textContent =
+        "Generar / actualizar playoffs";
+
+    }
+
+
+    renderFootballPlayoffAdminStatus();
+
+  }
+
+}
+
+
+// ======================================================
+// ESTADO DEL PANEL
+// ======================================================
+
+function renderFootballPlayoffAdminStatus() {
+
+  const status =
+    document.getElementById(
+      "footballPlayoffAdminStatus"
+    );
+
+
+  if (!status) {
+    return;
+  }
+
+
+  const sf1 =
+    findAdminFootballRound(
+      "Semifinal 1"
+    );
+
+
+  const sf2 =
+    findAdminFootballRound(
+      "Semifinal 2"
+    );
+
+
+  const finalMatch =
+    findAdminFootballRound(
+      "Final"
+    );
+
+
+  if (
+    finalMatch
+  ) {
+
+    status.textContent =
+      "✓ Final creada.";
+
+    return;
+
+  }
+
+
+  if (
+    sf1 &&
+    sf2
+  ) {
+
+    status.textContent =
+      "✓ Semifinales creadas. Cuando ambas terminen, presioná nuevamente el botón para generar la final.";
+
+    return;
+
+  }
+
+
+  status.textContent =
+    "Las semifinales se podrán generar cuando finalice la fase de grupos.";
 
 }

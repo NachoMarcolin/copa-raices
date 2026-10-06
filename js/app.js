@@ -1522,12 +1522,82 @@ function renderSchedule() {
   }
 
 
-  const list =
-    sportMatches()
-      .slice(
-        0,
-        7
-      );
+ const list =
+  [...sportMatches()]
+    .sort(
+      (a, b) => {
+
+        // Partidos en vivo primero
+        if (
+          a.status === "live" &&
+          b.status !== "live"
+        ) {
+          return -1;
+        }
+
+        if (
+          b.status === "live" &&
+          a.status !== "live"
+        ) {
+          return 1;
+        }
+
+
+        // Partidos finalizados:
+        // los más recientes arriba
+        if (
+          a.status === "finished" &&
+          b.status === "finished"
+        ) {
+
+          return (
+            String(
+              b.start_time || ""
+            )
+            .localeCompare(
+              String(
+                a.start_time || ""
+              )
+            )
+          );
+
+        }
+
+
+        if (
+          a.status === "finished" &&
+          b.status !== "finished"
+        ) {
+          return -1;
+        }
+
+        if (
+          b.status === "finished" &&
+          a.status !== "finished"
+        ) {
+          return 1;
+        }
+
+
+        // Próximos partidos:
+        // los más cercanos primero
+        return (
+          String(
+            a.start_time || ""
+          )
+          .localeCompare(
+            String(
+              b.start_time || ""
+            )
+          )
+        );
+
+      }
+    )
+    .slice(
+      0,
+      7
+    );
 
 
   const today =
@@ -4282,7 +4352,7 @@ function renderStandings() {
               </th>
 
               <th>
-                Jugador / Pareja
+                Equipo / Pareja
               </th>
 
               <th>
@@ -4534,7 +4604,7 @@ function renderStandings() {
                             index
                           ) => `
 
-                            <tr>
+                            <tr class="${index < 2 ? "qualified-row" : ""}">
 
                               <td>
                                 ${index + 1}
@@ -4606,5 +4676,1376 @@ function renderStandings() {
       )
 
       .join("");
+
+}
+
+
+// ======================================================
+// PLAYOFFS FÚTBOL
+// FASE DE GRUPOS → SEMIFINALES → FINAL
+// ======================================================
+
+
+// ------------------------------------------------------
+// DETECTAR PARTIDO DE PLAYOFF
+// ------------------------------------------------------
+
+function isFootballPlayoffMatch(match) {
+
+  if (
+    match.sport !== "football"
+  ) {
+    return false;
+  }
+
+
+  const round =
+    String(
+      match.round_name || ""
+    )
+    .toLowerCase();
+
+
+  return (
+    round.includes("cuarto") ||
+    round.includes("semi") ||
+    round.includes("final")
+  );
+
+}
+
+
+// ------------------------------------------------------
+// PARTIDOS DE FASE DE GRUPOS
+// ------------------------------------------------------
+
+function footballGroupMatches() {
+
+  return matches.filter(
+    match =>
+      match.sport === "football" &&
+      !isFootballPlayoffMatch(match)
+  );
+
+}
+
+
+// ------------------------------------------------------
+// CALCULAR TABLA DE GRUPOS
+// SIN CONTAR PLAYOFFS
+// ------------------------------------------------------
+
+function calculateStandingsByGroup() {
+
+  const groups = {};
+
+
+  const groupMatches =
+    footballGroupMatches();
+
+
+  // Crear participantes
+  groupMatches.forEach(
+    match => {
+
+      const group =
+        getMatchGroup(
+          match
+        );
+
+
+      if (!groups[group]) {
+
+        groups[group] = {};
+
+      }
+
+
+      const home =
+        teamName(
+          match.home_team
+        );
+
+
+      const away =
+        teamName(
+          match.away_team
+        );
+
+
+      if (!groups[group][home]) {
+
+        groups[group][home] =
+          newTeamTable(
+            home
+          );
+
+      }
+
+
+      if (!groups[group][away]) {
+
+        groups[group][away] =
+          newTeamTable(
+            away
+          );
+
+      }
+
+    }
+  );
+
+
+  // Sumar solamente finalizados
+  groupMatches
+
+    .filter(
+      match =>
+        match.status === "finished"
+    )
+
+    .forEach(
+      match => {
+
+        const group =
+          getMatchGroup(
+            match
+          );
+
+
+        if (!groups[group]) {
+
+          groups[group] = {};
+
+        }
+
+
+        const home =
+          teamName(
+            match.home_team
+          );
+
+
+        const away =
+          teamName(
+            match.away_team
+          );
+
+
+        if (!groups[group][home]) {
+
+          groups[group][home] =
+            newTeamTable(
+              home
+            );
+
+        }
+
+
+        if (!groups[group][away]) {
+
+          groups[group][away] =
+            newTeamTable(
+              away
+            );
+
+        }
+
+
+        const h =
+          Number(
+            match.home_score || 0
+          );
+
+
+        const a =
+          Number(
+            match.away_score || 0
+          );
+
+
+        const homeTeam =
+          groups[group][home];
+
+
+        const awayTeam =
+          groups[group][away];
+
+
+        homeTeam.pj++;
+
+        awayTeam.pj++;
+
+
+        homeTeam.gf += h;
+
+        homeTeam.gc += a;
+
+
+        awayTeam.gf += a;
+
+        awayTeam.gc += h;
+
+
+        if (h > a) {
+
+          homeTeam.pg++;
+
+          homeTeam.pts += 3;
+
+          awayTeam.pp++;
+
+        }
+
+        else if (a > h) {
+
+          awayTeam.pg++;
+
+          awayTeam.pts += 3;
+
+          homeTeam.pp++;
+
+        }
+
+        else {
+
+          homeTeam.pe++;
+
+          awayTeam.pe++;
+
+          homeTeam.pts++;
+
+          awayTeam.pts++;
+
+        }
+
+      }
+    );
+
+
+  const result = {};
+
+
+  Object
+    .entries(
+      groups
+    )
+    .forEach(
+      ([
+        group,
+        teams
+      ]) => {
+
+        result[group] =
+          Object
+            .values(
+              teams
+            )
+
+            .map(
+              team => {
+
+                team.dg =
+                  team.gf -
+                  team.gc;
+
+
+                return team;
+
+              }
+            )
+
+            .sort(
+              (
+                a,
+                b
+              ) =>
+
+                b.pts -
+                a.pts
+
+                ||
+
+                b.dg -
+                a.dg
+
+                ||
+
+                b.gf -
+                a.gf
+
+                ||
+
+                a.name.localeCompare(
+                  b.name,
+                  "es"
+                )
+
+            );
+
+      }
+    );
+
+
+  return result;
+
+}
+
+
+// ------------------------------------------------------
+// SABER SI UN GRUPO TERMINÓ
+// ------------------------------------------------------
+
+function isFootballGroupFinished(
+  groupName
+) {
+
+  const groupMatches =
+    footballGroupMatches()
+      .filter(
+        match =>
+          getMatchGroup(match) ===
+          groupName
+      );
+
+
+  if (!groupMatches.length) {
+
+    return false;
+
+  }
+
+
+  const teamIds =
+    new Set();
+
+
+  groupMatches.forEach(
+    match => {
+
+      if (
+        match.home_team?.id
+      ) {
+
+        teamIds.add(
+          Number(
+            match.home_team.id
+          )
+        );
+
+      }
+
+
+      if (
+        match.away_team?.id
+      ) {
+
+        teamIds.add(
+          Number(
+            match.away_team.id
+          )
+        );
+
+      }
+
+    }
+  );
+
+
+  const teamCount =
+    teamIds.size;
+
+
+  if (
+    teamCount < 2
+  ) {
+
+    return false;
+
+  }
+
+
+  // Todos contra todos:
+  // 4 equipos = 6 partidos
+
+  const expectedMatches =
+    (
+      teamCount *
+      (
+        teamCount - 1
+      )
+    ) / 2;
+
+
+  const finishedMatches =
+    groupMatches.filter(
+      match =>
+        match.status ===
+        "finished"
+    ).length;
+
+
+  return (
+    groupMatches.length >=
+      expectedMatches
+
+    &&
+
+    finishedMatches >=
+      expectedMatches
+  );
+
+}
+
+
+// ------------------------------------------------------
+// EQUIPO POR POSICIÓN
+// ------------------------------------------------------
+
+function footballQualifiedTeam(
+  groupName,
+  position
+) {
+
+  const standings =
+    calculateStandingsByGroup();
+
+
+  if (
+    !isFootballGroupFinished(
+      groupName
+    )
+  ) {
+
+    return null;
+
+  }
+
+
+  const team =
+    standings[
+      groupName
+    ]?.[
+      position - 1
+    ];
+
+
+  return (
+    team?.name ||
+    null
+  );
+
+}
+
+
+// ------------------------------------------------------
+// GANADOR DE UN PARTIDO
+// ------------------------------------------------------
+
+function playoffWinner(
+  match
+) {
+
+  if (
+    !match ||
+    match.status !==
+      "finished"
+  ) {
+
+    return null;
+
+  }
+
+
+  const home =
+    Number(
+      match.home_score || 0
+    );
+
+
+  const away =
+    Number(
+      match.away_score || 0
+    );
+
+
+  if (
+    home > away
+  ) {
+
+    return teamName(
+      match.home_team
+    );
+
+  }
+
+
+  if (
+    away > home
+  ) {
+
+    return teamName(
+      match.away_team
+    );
+
+  }
+
+
+  return null;
+
+}
+
+
+// ------------------------------------------------------
+// PARTIDOS DE PLAYOFF EXISTENTES EN SUPABASE
+// ------------------------------------------------------
+
+function footballSemifinalMatches() {
+
+  return matches
+
+    .filter(
+      match => {
+
+        if (
+          match.sport !==
+          "football"
+        ) {
+
+          return false;
+
+        }
+
+
+        const round =
+          String(
+            match.round_name || ""
+          )
+          .toLowerCase();
+
+
+        return (
+          round.includes(
+            "semi"
+          )
+        );
+
+      }
+    )
+
+    .sort(
+      (
+        a,
+        b
+      ) =>
+        String(
+          a.start_time || ""
+        )
+        .localeCompare(
+          String(
+            b.start_time || ""
+          )
+        )
+    );
+
+}
+
+
+function footballFinalMatch() {
+
+  return matches.find(
+    match => {
+
+      if (
+        match.sport !==
+        "football"
+      ) {
+
+        return false;
+
+      }
+
+
+      const round =
+        String(
+          match.round_name || ""
+        )
+        .toLowerCase();
+
+
+      return (
+        round.includes(
+          "final"
+        )
+        &&
+        !round.includes(
+          "semi"
+        )
+      );
+
+    }
+  ) || null;
+
+}
+
+
+// ------------------------------------------------------
+// HTML DE PARTIDO DEL FIXTURE
+// ------------------------------------------------------
+
+function fixtureMatchRowHTML(
+  match
+) {
+
+  const isPadel =
+    match.sport ===
+    "padel";
+
+
+  const homeScore =
+    isPadel
+
+      ? padelHomeGames(
+          match
+        )
+
+      : Number(
+          match.home_score ||
+          0
+        );
+
+
+  const awayScore =
+    isPadel
+
+      ? padelAwayGames(
+          match
+        )
+
+      : Number(
+          match.away_score ||
+          0
+        );
+
+
+  let result =
+    "Próximo";
+
+
+  if (
+    match.status ===
+    "live"
+  ) {
+
+    result =
+      "EN VIVO";
+
+  }
+
+
+  if (
+    match.status ===
+    "finished"
+  ) {
+
+    result =
+      "FINAL";
+
+  }
+
+
+  return `
+
+    <div class="fixture-row">
+
+      <div class="fixture-date">
+
+        ${normalizeTime(
+          match.start_time
+        )}
+
+        <br>
+
+        ${match.court || ""}
+
+      </div>
+
+
+      <div class="fixture-teams">
+
+
+        <div class="fixture-team-side">
+
+          <span class="fixture-team-name">
+
+            ${teamName(
+              match.home_team
+            )}
+
+          </span>
+
+
+          ${
+            match.status !==
+            "pending"
+
+              ? `
+
+                <strong class="
+                  fixture-team-score
+                ">
+                  ${homeScore}
+                </strong>
+
+              `
+
+              : ""
+          }
+
+        </div>
+
+
+        <span class="fixture-vs">
+          vs
+        </span>
+
+
+        <div class="fixture-team-side">
+
+          <span class="fixture-team-name">
+
+            ${teamName(
+              match.away_team
+            )}
+
+          </span>
+
+
+          ${
+            match.status !==
+            "pending"
+
+              ? `
+
+                <strong class="
+                  fixture-team-score
+                ">
+                  ${awayScore}
+                </strong>
+
+              `
+
+              : ""
+          }
+
+        </div>
+
+
+      </div>
+
+
+      <div class="fixture-result">
+
+        ${result}
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+// ------------------------------------------------------
+// TARJETA PLAYOFF
+// ------------------------------------------------------
+
+function playoffCardHTML({
+  label,
+  home,
+  away,
+  match = null
+}) {
+
+  const homeName =
+    match
+      ? teamName(
+          match.home_team
+        )
+      : home;
+
+
+  const awayName =
+    match
+      ? teamName(
+          match.away_team
+        )
+      : away;
+
+
+  const finished =
+    match?.status ===
+    "finished";
+
+
+  const live =
+    match?.status ===
+    "live";
+
+
+  return `
+
+    <article class="
+      playoff-match-card
+      ${
+        finished
+          ? "finished"
+          : ""
+      }
+    ">
+
+
+      <div class="
+        playoff-match-top
+      ">
+
+        <span>
+          ${label}
+        </span>
+
+
+        ${
+          live
+
+            ? `
+              <strong class="
+                playoff-live
+              ">
+                EN VIVO
+              </strong>
+            `
+
+            : finished
+
+              ? `
+                <strong>
+                  FINAL
+                </strong>
+              `
+
+              : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${homeName}
+        </span>
+
+
+        ${
+          match &&
+          match.status !==
+            "pending"
+
+            ? `
+              <strong>
+                ${match.home_score ?? 0}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${awayName}
+        </span>
+
+
+        ${
+          match &&
+          match.status !==
+            "pending"
+
+            ? `
+              <strong>
+                ${match.away_score ?? 0}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      ${
+        match?.court
+
+          ? `
+
+            <div class="
+              playoff-match-meta
+            ">
+
+              ${normalizeTime(
+                match.start_time
+              )}
+
+              · Cancha
+              ${match.court}
+
+            </div>
+
+          `
+
+          : ""
+      }
+
+
+    </article>
+
+  `;
+
+}
+
+
+// ======================================================
+// NUEVO FIXTURE
+// ======================================================
+
+function renderFixture() {
+
+  const container =
+    document.getElementById(
+      "fixtureContent"
+    );
+
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  // ==================================================
+  // PÁDEL
+  // Por ahora mantiene el fixture normal.
+  // ==================================================
+
+  if (
+    currentSport ===
+    "padel"
+  ) {
+
+    const list =
+      sportMatches();
+
+
+    if (!list.length) {
+
+      container.innerHTML = `
+
+        <div class="empty-state">
+
+          <strong>
+            Fixture todavía no disponible
+          </strong>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML =
+      list
+        .map(
+          match =>
+            fixtureMatchRowHTML(
+              match
+            )
+        )
+        .join("");
+
+
+    return;
+
+  }
+
+
+  // ==================================================
+  // FÚTBOL
+  // ==================================================
+
+  const groupMatches =
+    footballGroupMatches();
+
+
+  const standings =
+    calculateStandingsByGroup();
+
+
+  const groupNames =
+    Object
+      .keys(
+        standings
+      )
+      .filter(
+        group =>
+          group !==
+          "General"
+      )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          a.localeCompare(
+            b,
+            "es"
+          )
+      );
+
+
+  const groupA =
+    groupNames[0] ||
+    "Grupo A";
+
+
+  const groupB =
+    groupNames[1] ||
+    "Grupo B";
+
+
+  const groupAFinished =
+    isFootballGroupFinished(
+      groupA
+    );
+
+
+  const groupBFinished =
+    isFootballGroupFinished(
+      groupB
+    );
+
+
+  const firstA =
+    footballQualifiedTeam(
+      groupA,
+      1
+    );
+
+
+  const secondA =
+    footballQualifiedTeam(
+      groupA,
+      2
+    );
+
+
+  const firstB =
+    footballQualifiedTeam(
+      groupB,
+      1
+    );
+
+
+  const secondB =
+    footballQualifiedTeam(
+      groupB,
+      2
+    );
+
+
+  const semifinals =
+    footballSemifinalMatches();
+
+
+  const sf1 =
+    semifinals[0] ||
+    null;
+
+
+  const sf2 =
+    semifinals[1] ||
+    null;
+
+
+  const finalMatch =
+    footballFinalMatch();
+
+
+  const sf1Home =
+    firstA ||
+    `1° ${groupA}`;
+
+
+  const sf1Away =
+    secondB ||
+    `2° ${groupB}`;
+
+
+  const sf2Home =
+    firstB ||
+    `1° ${groupB}`;
+
+
+  const sf2Away =
+    secondA ||
+    `2° ${groupA}`;
+
+
+  const finalist1 =
+    playoffWinner(
+      sf1
+    ) ||
+    "Ganador SF1";
+
+
+  const finalist2 =
+    playoffWinner(
+      sf2
+    ) ||
+    "Ganador SF2";
+
+
+  let html = "";
+
+
+  // ==================================================
+  // FASE DE GRUPOS
+  // ==================================================
+
+  html += `
+
+    <section class="
+      fixture-stage
+    ">
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          FASE DE GRUPOS
+        </span>
+
+      </div>
+
+
+      <div class="
+        fixture-stage-list
+      ">
+
+        ${
+          groupMatches.length
+
+            ? groupMatches
+                .map(
+                  match =>
+                    fixtureMatchRowHTML(
+                      match
+                    )
+                )
+                .join("")
+
+            : `
+
+              <div class="
+                empty-state
+              ">
+
+                <strong>
+                  No hay partidos cargados
+                </strong>
+
+              </div>
+
+            `
+        }
+
+      </div>
+
+    </section>
+
+  `;
+
+
+  // ==================================================
+  // PLAYOFFS
+  // ==================================================
+
+  html += `
+
+    <section class="
+      fixture-stage
+      playoff-stage
+    ">
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          PLAYOFFS
+        </span>
+
+      </div>
+
+
+      ${
+        !groupAFinished ||
+        !groupBFinished
+
+          ? `
+
+            <div class="
+              playoff-info
+            ">
+
+              Los 2 primeros de cada grupo
+              clasifican a semifinales.
+
+            </div>
+
+          `
+
+          : `
+
+            <div class="
+              playoff-info
+              qualified
+            ">
+
+              Fase de grupos finalizada.
+              Clasificados definidos.
+
+            </div>
+
+          `
+      }
+
+
+      <div class="
+        playoff-round
+      ">
+
+        <h3>
+          Semifinales
+        </h3>
+
+
+        <div class="
+          playoff-grid
+        ">
+
+          ${playoffCardHTML({
+
+            label:
+              "Semifinal 1",
+
+            home:
+              sf1Home,
+
+            away:
+              sf1Away,
+
+            match:
+              sf1
+
+          })}
+
+
+          ${playoffCardHTML({
+
+            label:
+              "Semifinal 2",
+
+            home:
+              sf2Home,
+
+            away:
+              sf2Away,
+
+            match:
+              sf2
+
+          })}
+
+        </div>
+
+      </div>
+
+
+      <div class="
+        playoff-connector
+      ">
+
+        ↓
+
+      </div>
+
+
+      <div class="
+        playoff-round
+        final-round
+      ">
+
+        <h3>
+          Final
+        </h3>
+
+
+        <div class="
+          playoff-grid
+          final-grid
+        ">
+
+          ${playoffCardHTML({
+
+            label:
+              "Final",
+
+            home:
+              finalist1,
+
+            away:
+              finalist2,
+
+            match:
+              finalMatch
+
+          })}
+
+        </div>
+
+      </div>
+
+
+    </section>
+
+  `;
+
+
+  container.innerHTML =
+    html;
 
 }
