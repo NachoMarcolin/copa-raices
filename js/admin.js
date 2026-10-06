@@ -918,7 +918,17 @@ function renderMatchSelector() {
         +
 
         statusText;
+      if (
+  match.status === "finished"
+) {
 
+  option.style.color =
+    "#d32f2f";
+
+  option.style.fontWeight =
+    "700";
+
+}
 
       if (
         Number(match.id) ===
@@ -6421,5 +6431,2123 @@ function renderFootballPlayoffAdminStatus() {
 
   status.textContent =
     "Las semifinales se podrán generar cuando finalice la fase de grupos.";
+
+}
+
+// ======================================================
+// DEFINICIÓN POR PENALES - FÚTBOL
+// SOLO PLAYOFFS
+// ======================================================
+
+
+// Conservamos el render original y agregamos
+// el panel de penales después.
+
+const renderControlBeforePenalties =
+  renderControl;
+
+
+renderControl =
+  function () {
+
+    renderControlBeforePenalties();
+
+    renderFootballPenaltyPanel(
+      currentMatch()
+    );
+
+  };
+
+
+// ======================================================
+// CREAR PANEL
+// ======================================================
+
+function ensureFootballPenaltyPanel() {
+
+  if (
+    document.getElementById(
+      "footballPenaltyPanel"
+    )
+  ) {
+    return;
+  }
+
+
+  const scoreboard =
+    document.querySelector(
+      ".admin-scoreboard"
+    );
+
+
+  if (!scoreboard) {
+    return;
+  }
+
+
+  const panel =
+    document.createElement(
+      "div"
+    );
+
+
+  panel.id =
+    "footballPenaltyPanel";
+
+
+  panel.className =
+    "football-penalty-panel";
+
+
+  panel.innerHTML = `
+
+    <div class="football-penalty-title">
+
+      <div>
+
+        <span>
+          DESEMPATE
+        </span>
+
+        <strong>
+          Definición por penales
+        </strong>
+
+      </div>
+
+      <small>
+        Solo se utiliza si el partido termina empatado.
+      </small>
+
+    </div>
+
+
+    <div class="football-penalty-score">
+
+
+      <div class="football-penalty-team">
+
+        <span id="penaltyHomeName">
+          Local
+        </span>
+
+        <div class="football-penalty-controls">
+
+          <button
+            id="penaltyHomeMinus"
+            type="button"
+          >
+            −
+          </button>
+
+          <strong id="penaltyHomeScore">
+            0
+          </strong>
+
+          <button
+            id="penaltyHomePlus"
+            type="button"
+          >
+            +
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <span class="football-penalty-vs">
+        -
+      </span>
+
+
+      <div class="football-penalty-team">
+
+        <span id="penaltyAwayName">
+          Visitante
+        </span>
+
+        <div class="football-penalty-controls">
+
+          <button
+            id="penaltyAwayMinus"
+            type="button"
+          >
+            −
+          </button>
+
+          <strong id="penaltyAwayScore">
+            0
+          </strong>
+
+          <button
+            id="penaltyAwayPlus"
+            type="button"
+          >
+            +
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <button
+      id="resetFootballPenalties"
+      type="button"
+      class="football-penalty-reset"
+    >
+      Reiniciar penales
+    </button>
+
+  `;
+
+
+  scoreboard.insertAdjacentElement(
+    "afterend",
+    panel
+  );
+
+
+  document
+    .getElementById(
+      "penaltyHomePlus"
+    )
+    .addEventListener(
+      "click",
+      () =>
+        changeFootballPenalty(
+          "home",
+          1
+        )
+    );
+
+
+  document
+    .getElementById(
+      "penaltyHomeMinus"
+    )
+    .addEventListener(
+      "click",
+      () =>
+        changeFootballPenalty(
+          "home",
+          -1
+        )
+    );
+
+
+  document
+    .getElementById(
+      "penaltyAwayPlus"
+    )
+    .addEventListener(
+      "click",
+      () =>
+        changeFootballPenalty(
+          "away",
+          1
+        )
+    );
+
+
+  document
+    .getElementById(
+      "penaltyAwayMinus"
+    )
+    .addEventListener(
+      "click",
+      () =>
+        changeFootballPenalty(
+          "away",
+          -1
+        )
+    );
+
+
+  document
+    .getElementById(
+      "resetFootballPenalties"
+    )
+    .addEventListener(
+      "click",
+      resetFootballPenalties
+    );
+
+
+  // CSS del panel
+
+  if (
+    !document.getElementById(
+      "footballPenaltyStyles"
+    )
+  ) {
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+
+    style.id =
+      "footballPenaltyStyles";
+
+
+    style.textContent = `
+
+      .football-penalty-panel {
+        display: none;
+
+        margin-top: 18px;
+        padding: 18px;
+
+        border: 1px solid #d8e4ed;
+        border-radius: 14px;
+
+        background: #f8fbfd;
+      }
+
+
+      .football-penalty-title {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 15px;
+
+        margin-bottom: 18px;
+      }
+
+
+      .football-penalty-title div {
+        display: grid;
+        gap: 2px;
+      }
+
+
+      .football-penalty-title span {
+        color: var(--text-soft);
+
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 1px;
+      }
+
+
+      .football-penalty-title strong {
+        color: var(--navy);
+
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+
+      .football-penalty-title small {
+        max-width: 260px;
+
+        color: var(--text-soft);
+
+        font-size: 11px;
+        line-height: 1.4;
+
+        text-align: right;
+      }
+
+
+      .football-penalty-score {
+        display: grid;
+
+        grid-template-columns:
+          minmax(0, 1fr)
+          30px
+          minmax(0, 1fr);
+
+        align-items: center;
+
+        gap: 12px;
+      }
+
+
+      .football-penalty-team {
+        display: grid;
+        gap: 10px;
+
+        text-align: center;
+      }
+
+
+      .football-penalty-team > span {
+        color: var(--navy);
+
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+
+      .football-penalty-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        gap: 12px;
+      }
+
+
+      .football-penalty-controls button {
+        width: 38px;
+        height: 38px;
+
+        display: grid;
+        place-items: center;
+
+        border: 0;
+        border-radius: 50%;
+
+        background: var(--navy);
+
+        color: #ffffff;
+
+        font-size: 20px;
+        font-weight: 900;
+
+        cursor: pointer;
+      }
+
+
+      .football-penalty-controls strong {
+        min-width: 30px;
+
+        color: var(--navy);
+
+        font-size: 27px;
+        font-weight: 950;
+
+        text-align: center;
+      }
+
+
+      .football-penalty-vs {
+        color: var(--text-soft);
+
+        font-size: 20px;
+        font-weight: 900;
+
+        text-align: center;
+      }
+
+
+      .football-penalty-reset {
+        width: 100%;
+
+        margin-top: 18px;
+        padding: 11px;
+
+        border: 0;
+        border-radius: 10px;
+
+        background: #edf2f6;
+
+        color: var(--navy);
+
+        font-size: 11px;
+        font-weight: 850;
+
+        cursor: pointer;
+      }
+
+
+      @media (max-width: 540px) {
+
+        .football-penalty-title {
+          display: grid;
+        }
+
+
+        .football-penalty-title small {
+          max-width: none;
+
+          text-align: left;
+        }
+
+
+        .football-penalty-controls {
+          gap: 8px;
+        }
+
+      }
+
+    `;
+
+
+    document.head.appendChild(
+      style
+    );
+
+  }
+
+}
+
+
+// ======================================================
+// MOSTRAR / OCULTAR PANEL
+// ======================================================
+
+function renderFootballPenaltyPanel(
+  match
+) {
+
+  ensureFootballPenaltyPanel();
+
+
+  const panel =
+    document.getElementById(
+      "footballPenaltyPanel"
+    );
+
+
+  if (
+    !panel ||
+    !match
+  ) {
+    return;
+  }
+
+
+  const playoff =
+    match.sport === "football"
+    &&
+    isAdminFootballPlayoff(
+      match
+    );
+
+
+  const tied =
+    Number(
+      match.home_score || 0
+    )
+    ===
+    Number(
+      match.away_score || 0
+    );
+
+
+  // Solo aparece en playoffs
+  // cuando el partido ya comenzó
+  // y está empatado.
+
+  if (
+    !playoff ||
+    match.status === "pending" ||
+    !tied
+  ) {
+
+    panel.style.display =
+      "none";
+
+    return;
+
+  }
+
+
+  panel.style.display =
+    "block";
+
+
+  document
+    .getElementById(
+      "penaltyHomeName"
+    )
+    .textContent =
+      teamName(
+        match.home_team_id
+      );
+
+
+  document
+    .getElementById(
+      "penaltyAwayName"
+    )
+    .textContent =
+      teamName(
+        match.away_team_id
+      );
+
+
+  document
+    .getElementById(
+      "penaltyHomeScore"
+    )
+    .textContent =
+      Number(
+        match.football_home_penalties ||
+        0
+      );
+
+
+  document
+    .getElementById(
+      "penaltyAwayScore"
+    )
+    .textContent =
+      Number(
+        match.football_away_penalties ||
+        0
+      );
+
+}
+
+
+// ======================================================
+// SUMAR / RESTAR PENAL
+// ======================================================
+
+async function changeFootballPenalty(
+  side,
+  amount
+) {
+
+  const match =
+    currentMatch();
+
+
+  if (
+    !match ||
+    match.sport !== "football" ||
+    !isAdminFootballPlayoff(match)
+  ) {
+    return;
+  }
+
+
+  if (
+    Number(match.home_score || 0) !==
+    Number(match.away_score || 0)
+  ) {
+
+    alert(
+      "Los penales solo corresponden si el partido terminó empatado."
+    );
+
+    return;
+
+  }
+
+
+  const field =
+    side === "home"
+
+      ? "football_home_penalties"
+
+      : "football_away_penalties";
+
+
+  const value =
+    Math.max(
+      0,
+      Number(
+        match[field] || 0
+      )
+      +
+      amount
+    );
+
+
+  await updateMatch({
+    [field]:
+      value
+  });
+
+}
+
+
+// ======================================================
+// REINICIAR PENALES
+// ======================================================
+
+async function resetFootballPenalties() {
+
+  const match =
+    currentMatch();
+
+
+  if (!match) {
+    return;
+  }
+
+
+  const confirmed =
+    confirm(
+      "¿Reiniciar la definición por penales?"
+    );
+
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  await updateMatch({
+
+    football_home_penalties:
+      0,
+
+    football_away_penalties:
+      0
+
+  });
+
+}
+
+
+// ======================================================
+// GANADOR DE PLAYOFF
+// INCLUYE PENALES
+// ======================================================
+
+function getAdminFootballWinnerId(
+  match
+) {
+
+  if (
+    !match ||
+    match.status !== "finished"
+  ) {
+
+    return null;
+
+  }
+
+
+  const home =
+    Number(
+      match.home_score || 0
+    );
+
+
+  const away =
+    Number(
+      match.away_score || 0
+    );
+
+
+  // Ganador en tiempo reglamentario
+
+  if (
+    home > away
+  ) {
+
+    return Number(
+      match.home_team_id
+    );
+
+  }
+
+
+  if (
+    away > home
+  ) {
+
+    return Number(
+      match.away_team_id
+    );
+
+  }
+
+
+  // Empate → definición por penales
+
+  const homePenalties =
+    Number(
+      match.football_home_penalties ||
+      0
+    );
+
+
+  const awayPenalties =
+    Number(
+      match.football_away_penalties ||
+      0
+    );
+
+
+  if (
+    homePenalties >
+    awayPenalties
+  ) {
+
+    return Number(
+      match.home_team_id
+    );
+
+  }
+
+
+  if (
+    awayPenalties >
+    homePenalties
+  ) {
+
+    return Number(
+      match.away_team_id
+    );
+
+  }
+
+
+  // Todavía no hay ganador
+
+  return null;
+
+}
+
+// ======================================================
+// PLAYOFFS AUTOMÁTICOS DE PÁDEL
+//
+// CUARTOS
+// 1A - 2D
+// 1B - 2C
+// 1C - 2B
+// 2A - 1D
+//
+// SEMIS
+// QF1 - QF2
+// QF3 - QF4
+//
+// FINAL
+// SF1 - SF2
+// ======================================================
+
+
+if (
+  document.readyState === "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    setupPadelPlayoffsAdmin
+  );
+
+}
+
+else {
+
+  setupPadelPlayoffsAdmin();
+
+}
+
+
+// ======================================================
+// PANEL ADMIN
+// ======================================================
+
+function setupPadelPlayoffsAdmin() {
+
+  if (
+    document.getElementById(
+      "padelPlayoffsAdminCard"
+    )
+  ) {
+    return;
+  }
+
+
+  const section =
+    document.getElementById(
+      "admin-matches"
+    );
+
+
+  if (!section) {
+    return;
+  }
+
+
+  const firstCard =
+    section.querySelector(
+      ".admin-card"
+    );
+
+
+  if (!firstCard) {
+    return;
+  }
+
+
+  const card =
+    document.createElement(
+      "div"
+    );
+
+
+  card.id =
+    "padelPlayoffsAdminCard";
+
+
+  card.className =
+    "admin-card";
+
+
+  card.style.marginTop =
+    "22px";
+
+
+  card.innerHTML = `
+
+    <div class="admin-block-heading">
+
+      <h2>
+        Playoffs de pádel
+      </h2>
+
+    </div>
+
+
+    <p
+      style="
+        margin-bottom:16px;
+        color:var(--text-soft);
+        font-size:13px;
+        line-height:1.5;
+      "
+    >
+
+      Genera automáticamente cuartos,
+      semifinales y final según las
+      posiciones de los grupos A, B, C y D.
+
+    </p>
+
+
+    <button
+      id="generatePadelPlayoffs"
+      class="
+        admin-primary-button
+        admin-full-button
+      "
+    >
+
+      Generar / actualizar playoffs de pádel
+
+    </button>
+
+
+    <div
+      id="padelPlayoffAdminStatus"
+      style="
+        margin-top:14px;
+        font-size:12px;
+        color:var(--text-soft);
+      "
+    >
+    </div>
+
+  `;
+
+
+  const footballCard =
+    document.getElementById(
+      "footballPlayoffsAdminCard"
+    );
+
+
+  const anchor =
+    footballCard ||
+    firstCard;
+
+
+  anchor.insertAdjacentElement(
+    "afterend",
+    card
+  );
+
+
+  document
+    .getElementById(
+      "generatePadelPlayoffs"
+    )
+    .addEventListener(
+      "click",
+      generatePadelPlayoffs
+    );
+
+
+  renderPadelPlayoffAdminStatus();
+
+}
+
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+function normalizePadelGroup(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+    .trim()
+    .replace(
+      /^grupo\s+/i,
+      ""
+    )
+    .toUpperCase();
+
+}
+
+
+function isAdminPadelPlayoff(
+  match
+) {
+
+  if (
+    match.sport !== "padel"
+  ) {
+    return false;
+  }
+
+
+  const round =
+    String(
+      match.round_name || ""
+    )
+    .toLowerCase();
+
+
+  return (
+    round.includes("cuarto") ||
+    round.includes("semi") ||
+    round.includes("final")
+  );
+
+}
+
+
+function adminPadelGroupMatches() {
+
+  return adminMatches.filter(
+    match =>
+      match.sport === "padel"
+      &&
+      !isAdminPadelPlayoff(
+        match
+      )
+  );
+
+}
+
+
+function getAdminPadelMatchGroup(
+  match
+) {
+
+  if (
+    match.group_name
+  ) {
+
+    return normalizePadelGroup(
+      match.group_name
+    );
+
+  }
+
+
+  const home =
+    getTeam(
+      match.home_team_id
+    );
+
+
+  const away =
+    getTeam(
+      match.away_team_id
+    );
+
+
+  return normalizePadelGroup(
+    home?.group_name ||
+    away?.group_name ||
+    ""
+  );
+
+}
+
+
+// ======================================================
+// POSICIONES DE UN GRUPO
+// ======================================================
+
+function calculateAdminPadelGroupStandings(
+  groupName
+) {
+
+  const table = {};
+
+
+  adminTeams
+
+    .filter(
+      team =>
+        team.sport === "padel"
+        &&
+        normalizePadelGroup(
+          team.group_name
+        ) ===
+        normalizePadelGroup(
+          groupName
+        )
+    )
+
+    .forEach(
+      team => {
+
+        table[team.id] = {
+
+          id: team.id,
+
+          name: team.name,
+
+          pj: 0,
+
+          pg: 0,
+
+          pp: 0,
+
+          gf: 0,
+
+          gc: 0,
+
+          dg: 0,
+
+          pts: 0
+
+        };
+
+      }
+    );
+
+
+  adminPadelGroupMatches()
+
+    .filter(
+      match =>
+        getAdminPadelMatchGroup(
+          match
+        ) ===
+        normalizePadelGroup(
+          groupName
+        )
+    )
+
+    .filter(
+      match =>
+        match.status === "finished"
+    )
+
+    .forEach(
+      match => {
+
+        const home =
+          table[
+            match.home_team_id
+          ];
+
+
+        const away =
+          table[
+            match.away_team_id
+          ];
+
+
+        if (
+          !home ||
+          !away
+        ) {
+          return;
+        }
+
+
+        const h =
+          Number(
+            match.padel_home_games ||
+            match.home_score ||
+            0
+          );
+
+
+        const a =
+          Number(
+            match.padel_away_games ||
+            match.away_score ||
+            0
+          );
+
+
+        home.pj++;
+        away.pj++;
+
+
+        home.gf += h;
+        home.gc += a;
+
+
+        away.gf += a;
+        away.gc += h;
+
+
+        if (h > a) {
+
+          home.pg++;
+          home.pts += 1;
+
+          away.pp++;
+
+        }
+
+        else if (a > h) {
+
+          away.pg++;
+          away.pts += 1;
+
+          home.pp++;
+
+        }
+
+      }
+    );
+
+
+  return Object
+
+    .values(table)
+
+    .map(
+      team => {
+
+        team.dg =
+          team.gf -
+          team.gc;
+
+        return team;
+
+      }
+    )
+
+    .sort(
+      (a, b) =>
+
+        b.pts -
+        a.pts
+
+        ||
+
+        b.dg -
+        a.dg
+
+        ||
+
+        b.gf -
+        a.gf
+
+        ||
+
+        a.name.localeCompare(
+          b.name,
+          "es"
+        )
+
+    );
+
+}
+
+
+// ======================================================
+// SABER SI TERMINÓ UN GRUPO
+// ======================================================
+
+function isAdminPadelGroupFinished(
+  groupName
+) {
+
+  const teams =
+    adminTeams.filter(
+      team =>
+        team.sport === "padel"
+        &&
+        normalizePadelGroup(
+          team.group_name
+        ) ===
+        normalizePadelGroup(
+          groupName
+        )
+    );
+
+
+  if (
+    teams.length < 2
+  ) {
+    return false;
+  }
+
+
+  const expectedMatches =
+    (
+      teams.length *
+      (
+        teams.length - 1
+      )
+    ) / 2;
+
+
+  const groupMatches =
+    adminPadelGroupMatches()
+      .filter(
+        match =>
+          getAdminPadelMatchGroup(
+            match
+          ) ===
+          normalizePadelGroup(
+            groupName
+          )
+      );
+
+
+  const finished =
+    groupMatches.filter(
+      match =>
+        match.status ===
+        "finished"
+    ).length;
+
+
+  return (
+    groupMatches.length >=
+      expectedMatches
+    &&
+    finished >=
+      expectedMatches
+  );
+
+}
+
+
+// ======================================================
+// BUSCAR RONDA
+// ======================================================
+
+function findAdminPadelRound(
+  name
+) {
+
+  return adminMatches.find(
+    match =>
+      match.sport === "padel"
+      &&
+      String(
+        match.round_name || ""
+      )
+      .trim()
+      .toLowerCase() ===
+      name.toLowerCase()
+  ) || null;
+
+}
+
+
+// ======================================================
+// GANADOR DE PARTIDO
+// ======================================================
+
+function getAdminPadelWinnerId(
+  match
+) {
+
+  if (
+    !match ||
+    match.status !== "finished"
+  ) {
+
+    return null;
+
+  }
+
+
+  const home =
+    Number(
+      match.padel_home_games ||
+      match.home_score ||
+      0
+    );
+
+
+  const away =
+    Number(
+      match.padel_away_games ||
+      match.away_score ||
+      0
+    );
+
+
+  if (
+    home > away
+  ) {
+
+    return Number(
+      match.home_team_id
+    );
+
+  }
+
+
+  if (
+    away > home
+  ) {
+
+    return Number(
+      match.away_team_id
+    );
+
+  }
+
+
+  return null;
+
+}
+
+
+// ======================================================
+// FECHA
+// ======================================================
+
+function getPadelPlayoffDate() {
+
+  const dated =
+    adminPadelGroupMatches()
+
+      .filter(
+        match =>
+          match.match_date
+      )
+
+      .sort(
+        (a, b) =>
+          String(
+            b.match_date
+          )
+          .localeCompare(
+            String(
+              a.match_date
+            )
+          )
+      );
+
+
+  return (
+    dated[0]?.match_date ||
+    null
+  );
+
+}
+
+
+// ======================================================
+// CREAR / ACTUALIZAR PARTIDO
+// ======================================================
+
+async function createOrUpdatePadelPlayoff({
+  round,
+  homeId,
+  awayId,
+  court,
+  time,
+  date
+}) {
+
+  const existing =
+    findAdminPadelRound(
+      round
+    );
+
+
+  const payload = {
+
+    sport:
+      "padel",
+
+    home_team_id:
+      homeId,
+
+    away_team_id:
+      awayId,
+
+    court:
+      String(court),
+
+    group_name:
+      "",
+
+    round_name:
+      round,
+
+    match_date:
+      date,
+
+    start_time:
+      time,
+
+    period:
+      "SET ÚNICO"
+
+  };
+
+
+  if (
+    existing
+    &&
+    (
+      existing.status === "live"
+      ||
+      existing.status === "finished"
+    )
+  ) {
+
+    return existing;
+
+  }
+
+
+  const resetData = {
+
+    ...payload,
+
+    status:
+      "pending",
+
+    home_score:
+      0,
+
+    away_score:
+      0,
+
+    padel_home_games:
+      0,
+
+    padel_away_games:
+      0,
+
+    padel_home_points:
+      0,
+
+    padel_away_points:
+      0,
+
+    padel_tiebreak:
+      false,
+
+    padel_home_tiebreak:
+      0,
+
+    padel_away_tiebreak:
+      0,
+
+    padel_history:
+      [],
+
+    elapsed_seconds:
+      0,
+
+    clock_running:
+      false,
+
+    clock_started_at:
+      null
+
+  };
+
+
+  if (existing) {
+
+    const {
+      error
+    } =
+      await supabaseClient
+
+        .from("matches")
+
+        .update(
+          resetData
+        )
+
+        .eq(
+          "id",
+          existing.id
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return existing;
+
+  }
+
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+
+      .from("matches")
+
+      .insert(
+        resetData
+      )
+
+      .select()
+      .single();
+
+
+  if (error) {
+    throw error;
+  }
+
+
+  return data;
+
+}
+
+
+// ======================================================
+// GENERAR PLAYOFFS
+// ======================================================
+
+async function generatePadelPlayoffs() {
+
+  const button =
+    document.getElementById(
+      "generatePadelPlayoffs"
+    );
+
+
+  const status =
+    document.getElementById(
+      "padelPlayoffAdminStatus"
+    );
+
+
+  if (button) {
+
+    button.disabled =
+      true;
+
+    button.textContent =
+      "Procesando...";
+
+  }
+
+
+  try {
+
+    const requiredGroups =
+      ["A", "B", "C", "D"];
+
+
+    const availableGroups =
+      new Set(
+
+        adminTeams
+
+          .filter(
+            team =>
+              team.sport === "padel"
+          )
+
+          .map(
+            team =>
+              normalizePadelGroup(
+                team.group_name
+              )
+          )
+
+      );
+
+
+    const missingGroup =
+      requiredGroups.find(
+        group =>
+          !availableGroups.has(
+            group
+          )
+      );
+
+
+    if (missingGroup) {
+
+      alert(
+        `Falta el Grupo ${missingGroup} de pádel.`
+      );
+
+      return;
+
+    }
+
+
+    const unfinished =
+      requiredGroups.find(
+        group =>
+          !isAdminPadelGroupFinished(
+            group
+          )
+      );
+
+
+    if (unfinished) {
+
+      alert(
+        `El Grupo ${unfinished} todavía no terminó.`
+      );
+
+      return;
+
+    }
+
+
+    const A =
+      calculateAdminPadelGroupStandings(
+        "A"
+      );
+
+
+    const B =
+      calculateAdminPadelGroupStandings(
+        "B"
+      );
+
+
+    const C =
+      calculateAdminPadelGroupStandings(
+        "C"
+      );
+
+
+    const D =
+      calculateAdminPadelGroupStandings(
+        "D"
+      );
+
+
+    if (
+      A.length < 2 ||
+      B.length < 2 ||
+      C.length < 2 ||
+      D.length < 2
+    ) {
+
+      alert(
+        "No se pudieron determinar los clasificados."
+      );
+
+      return;
+
+    }
+
+
+    const date =
+      getPadelPlayoffDate();
+
+
+    // ==================================
+    // CUARTOS · 15:10
+    // ==================================
+
+    await createOrUpdatePadelPlayoff({
+
+      round:
+        "Cuartos 1",
+
+      homeId:
+        A[0].id,
+
+      awayId:
+        D[1].id,
+
+      court:
+        "1",
+
+      time:
+        "15:10:00",
+
+      date
+
+    });
+
+
+    await createOrUpdatePadelPlayoff({
+
+      round:
+        "Cuartos 2",
+
+      homeId:
+        B[0].id,
+
+      awayId:
+        C[1].id,
+
+      court:
+        "2",
+
+      time:
+        "15:10:00",
+
+      date
+
+    });
+
+
+    await createOrUpdatePadelPlayoff({
+
+      round:
+        "Cuartos 3",
+
+      homeId:
+        C[0].id,
+
+      awayId:
+        B[1].id,
+
+      court:
+        "3",
+
+      time:
+        "15:10:00",
+
+      date
+
+    });
+
+
+    await createOrUpdatePadelPlayoff({
+
+      round:
+        "Cuartos 4",
+
+      homeId:
+        A[1].id,
+
+      awayId:
+        D[0].id,
+
+      court:
+        "4",
+
+      time:
+        "15:10:00",
+
+      date
+
+    });
+
+
+    await loadEverything();
+
+
+    const qf1 =
+      findAdminPadelRound(
+        "Cuartos 1"
+      );
+
+
+    const qf2 =
+      findAdminPadelRound(
+        "Cuartos 2"
+      );
+
+
+    const qf3 =
+      findAdminPadelRound(
+        "Cuartos 3"
+      );
+
+
+    const qf4 =
+      findAdminPadelRound(
+        "Cuartos 4"
+      );
+
+
+    const qfWinners = [
+
+      getAdminPadelWinnerId(
+        qf1
+      ),
+
+      getAdminPadelWinnerId(
+        qf2
+      ),
+
+      getAdminPadelWinnerId(
+        qf3
+      ),
+
+      getAdminPadelWinnerId(
+        qf4
+      )
+
+    ];
+
+
+    // ==================================
+    // SEMIFINALES · 15:45
+    // ==================================
+
+    if (
+      qfWinners.every(Boolean)
+    ) {
+
+      await createOrUpdatePadelPlayoff({
+
+        round:
+          "Semifinal 1",
+
+        homeId:
+          qfWinners[0],
+
+        awayId:
+          qfWinners[1],
+
+        court:
+          "1",
+
+        time:
+          "15:45:00",
+
+        date
+
+      });
+
+
+      await createOrUpdatePadelPlayoff({
+
+        round:
+          "Semifinal 2",
+
+        homeId:
+          qfWinners[2],
+
+        awayId:
+          qfWinners[3],
+
+        court:
+          "2",
+
+        time:
+          "15:45:00",
+
+        date
+
+      });
+
+
+      await loadEverything();
+
+    }
+
+
+    const sf1 =
+      findAdminPadelRound(
+        "Semifinal 1"
+      );
+
+
+    const sf2 =
+      findAdminPadelRound(
+        "Semifinal 2"
+      );
+
+
+    const sfWinner1 =
+      getAdminPadelWinnerId(
+        sf1
+      );
+
+
+    const sfWinner2 =
+      getAdminPadelWinnerId(
+        sf2
+      );
+
+
+    // ==================================
+    // FINAL · 16:15
+    // ==================================
+
+    if (
+      sfWinner1 &&
+      sfWinner2
+    ) {
+
+      await createOrUpdatePadelPlayoff({
+
+        round:
+          "Final",
+
+        homeId:
+          sfWinner1,
+
+        awayId:
+          sfWinner2,
+
+        court:
+          "1",
+
+        time:
+          "16:15:00",
+
+        date
+
+      });
+
+
+      await loadEverything();
+
+    }
+
+
+    if (
+      sfWinner1 &&
+      sfWinner2
+    ) {
+
+      alert(
+        "Final de pádel generada."
+      );
+
+    }
+
+    else if (
+      qfWinners.every(Boolean)
+    ) {
+
+      alert(
+        "Semifinales de pádel generadas."
+      );
+
+    }
+
+    else {
+
+      alert(
+        "Cuartos de final de pádel generados."
+      );
+
+    }
+
+
+    renderPadelPlayoffAdminStatus();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "Error generando playoffs de pádel:",
+      error
+    );
+
+
+    alert(
+      "No se pudieron generar los playoffs de pádel."
+    );
+
+  }
+
+  finally {
+
+    if (button) {
+
+      button.disabled =
+        false;
+
+
+      button.textContent =
+        "Generar / actualizar playoffs de pádel";
+
+    }
+
+  }
+
+}
+
+
+// ======================================================
+// ESTADO
+// ======================================================
+
+function renderPadelPlayoffAdminStatus() {
+
+  const status =
+    document.getElementById(
+      "padelPlayoffAdminStatus"
+    );
+
+
+  if (!status) {
+    return;
+  }
+
+
+  if (
+    findAdminPadelRound(
+      "Final"
+    )
+  ) {
+
+    status.textContent =
+      "✓ Final creada.";
+
+    return;
+
+  }
+
+
+  if (
+    findAdminPadelRound(
+      "Semifinal 1"
+    )
+    &&
+    findAdminPadelRound(
+      "Semifinal 2"
+    )
+  ) {
+
+    status.textContent =
+      "✓ Semifinales creadas.";
+
+    return;
+
+  }
+
+
+  if (
+    findAdminPadelRound(
+      "Cuartos 1"
+    )
+  ) {
+
+    status.textContent =
+      "✓ Cuartos de final creados.";
+
+    return;
+
+  }
+
+
+  status.textContent =
+    "Los cuartos se generan cuando terminen los 4 grupos.";
 
 }

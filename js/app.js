@@ -6049,3 +6049,773 @@ function renderFixture() {
     html;
 
 }
+
+// ======================================================
+// PLAYOFFS - GANADOR POR PENALES
+// ======================================================
+
+
+function playoffWinner(
+  match
+) {
+
+  if (
+    !match ||
+    match.status !== "finished"
+  ) {
+
+    return null;
+
+  }
+
+
+  const home =
+    Number(
+      match.home_score || 0
+    );
+
+
+  const away =
+    Number(
+      match.away_score || 0
+    );
+
+
+  if (
+    home > away
+  ) {
+
+    return teamName(
+      match.home_team
+    );
+
+  }
+
+
+  if (
+    away > home
+  ) {
+
+    return teamName(
+      match.away_team
+    );
+
+  }
+
+
+  const homePenalties =
+    Number(
+      match.football_home_penalties ||
+      0
+    );
+
+
+  const awayPenalties =
+    Number(
+      match.football_away_penalties ||
+      0
+    );
+
+
+  if (
+    homePenalties >
+    awayPenalties
+  ) {
+
+    return teamName(
+      match.home_team
+    );
+
+  }
+
+
+  if (
+    awayPenalties >
+    homePenalties
+  ) {
+
+    return teamName(
+      match.away_team
+    );
+
+  }
+
+
+  return null;
+
+}
+
+
+// ======================================================
+// TARJETA PLAYOFF CON PENALES
+// ======================================================
+
+
+function playoffCardHTML({
+  label,
+  home,
+  away,
+  match = null
+}) {
+
+  const homeName =
+    match
+
+      ? teamName(
+          match.home_team
+        )
+
+      : home;
+
+
+  const awayName =
+    match
+
+      ? teamName(
+          match.away_team
+        )
+
+      : away;
+
+
+  const finished =
+    match?.status ===
+    "finished";
+
+
+  const live =
+    match?.status ===
+    "live";
+
+
+  const homeScore =
+    Number(
+      match?.home_score ||
+      0
+    );
+
+
+  const awayScore =
+    Number(
+      match?.away_score ||
+      0
+    );
+
+
+  const homePenalties =
+    Number(
+      match?.football_home_penalties ||
+      0
+    );
+
+
+  const awayPenalties =
+    Number(
+      match?.football_away_penalties ||
+      0
+    );
+
+
+  const decidedByPenalties =
+    finished
+    &&
+    homeScore === awayScore
+    &&
+    homePenalties !== awayPenalties;
+
+
+  return `
+
+    <article class="
+      playoff-match-card
+      ${finished ? "finished" : ""}
+    ">
+
+
+      <div class="
+        playoff-match-top
+      ">
+
+        <span>
+          ${label}
+        </span>
+
+
+        ${
+          live
+
+            ? `
+              <strong class="playoff-live">
+                EN VIVO
+              </strong>
+            `
+
+            : finished
+
+              ? `
+                <strong>
+                  FINAL
+                </strong>
+              `
+
+              : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${homeName}
+        </span>
+
+
+        ${
+          match &&
+          match.status !== "pending"
+
+            ? `
+              <strong>
+                ${homeScore}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${awayName}
+        </span>
+
+
+        ${
+          match &&
+          match.status !== "pending"
+
+            ? `
+              <strong>
+                ${awayScore}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      ${
+        decidedByPenalties
+
+          ? `
+
+            <div
+              style="
+                padding:10px 14px;
+                background:#f3f8fc;
+                border-bottom:1px solid var(--border);
+                color:var(--navy);
+                font-size:11px;
+                font-weight:850;
+              "
+            >
+
+              Penales:
+              ${homePenalties}
+              -
+              ${awayPenalties}
+
+            </div>
+
+          `
+
+          : ""
+      }
+
+
+      ${
+        match?.court
+
+          ? `
+
+            <div class="
+              playoff-match-meta
+            ">
+
+              ${normalizeTime(
+                match.start_time
+              )}
+
+              · Cancha
+              ${match.court}
+
+            </div>
+
+          `
+
+          : ""
+      }
+
+
+    </article>
+
+  `;
+
+}
+
+
+// ======================================================
+// PÁDEL - POSICIONES POR GRUPOS
+// 4 GRUPOS · CLASIFICAN LOS 2 PRIMEROS
+// ======================================================
+
+function isPadelPlayoffMatch(match) {
+
+  if (match.sport !== "padel") {
+    return false;
+  }
+
+  const round =
+    String(match.round_name || "")
+      .toLowerCase();
+
+  return (
+    round.includes("cuarto") ||
+    round.includes("semi") ||
+    round.includes("final")
+  );
+}
+
+
+function padelGroupMatches() {
+
+  return matches.filter(
+    match =>
+      match.sport === "padel" &&
+      !isPadelPlayoffMatch(match)
+  );
+
+}
+
+
+function calculatePadelStandingsByGroup() {
+
+  const groups = {};
+
+
+  padelGroupMatches().forEach(
+    match => {
+
+      const group =
+        getMatchGroup(match);
+
+
+      if (!groups[group]) {
+        groups[group] = {};
+      }
+
+
+      const participants = [
+        match.home_team,
+        match.away_team
+      ];
+
+
+      participants.forEach(
+        team => {
+
+          if (!team?.id) {
+            return;
+          }
+
+
+          if (!groups[group][team.id]) {
+
+            groups[group][team.id] = {
+
+              id: team.id,
+
+              name:
+                teamName(team),
+
+              pj: 0,
+
+              pg: 0,
+
+              pp: 0,
+
+              gf: 0,
+
+              gc: 0,
+
+              dg: 0,
+
+              pts: 0
+
+            };
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  padelGroupMatches()
+
+    .filter(
+      match =>
+        match.status === "finished"
+    )
+
+    .forEach(
+      match => {
+
+        const group =
+          getMatchGroup(match);
+
+
+        const home =
+          groups[group]?.[
+            match.home_team?.id
+          ];
+
+
+        const away =
+          groups[group]?.[
+            match.away_team?.id
+          ];
+
+
+        if (!home || !away) {
+          return;
+        }
+
+
+        const h =
+          padelHomeGames(match);
+
+
+        const a =
+          padelAwayGames(match);
+
+
+        home.pj++;
+        away.pj++;
+
+
+        home.gf += h;
+        home.gc += a;
+
+
+        away.gf += a;
+        away.gc += h;
+
+
+        if (h > a) {
+
+          home.pg++;
+          home.pts += 1;
+
+          away.pp++;
+
+        }
+
+        else if (a > h) {
+
+          away.pg++;
+          away.pts += 1;
+
+          home.pp++;
+
+        }
+
+      }
+    );
+
+
+  const result = {};
+
+
+  Object
+    .entries(groups)
+    .forEach(
+      ([group, teams]) => {
+
+        result[group] =
+          Object
+            .values(teams)
+
+            .map(
+              team => {
+
+                team.dg =
+                  team.gf -
+                  team.gc;
+
+                return team;
+
+              }
+            )
+
+            .sort(
+              (a, b) =>
+
+                b.pts -
+                a.pts
+
+                ||
+
+                b.dg -
+                a.dg
+
+                ||
+
+                b.gf -
+                a.gf
+
+                ||
+
+                a.name.localeCompare(
+                  b.name,
+                  "es"
+                )
+
+            );
+
+      }
+    );
+
+
+  return result;
+
+}
+
+
+// Guardamos el render actual.
+// Fútbol sigue funcionando exactamente como está.
+
+const renderStandingsBeforePadelGroups =
+  renderStandings;
+
+
+renderStandings =
+  function () {
+
+    if (
+      currentSport !== "padel"
+    ) {
+
+      renderStandingsBeforePadelGroups();
+
+      return;
+
+    }
+
+
+    let container =
+      document.getElementById(
+        "standingsGroups"
+      );
+
+
+    if (!container) {
+
+      const oldCard =
+        document.querySelector(
+          ".standings-card"
+        );
+
+
+      if (!oldCard) {
+        return;
+      }
+
+
+      container =
+        document.createElement(
+          "div"
+        );
+
+
+      container.id =
+        "standingsGroups";
+
+
+      container.className =
+        "standings-groups";
+
+
+      oldCard.replaceWith(
+        container
+      );
+
+    }
+
+
+    const standings =
+      calculatePadelStandingsByGroup();
+
+
+    const groups =
+      Object
+        .keys(standings)
+
+        .filter(
+          group =>
+            group !== "General"
+        )
+
+        .sort(
+          (a, b) =>
+            a.localeCompare(
+              b,
+              "es"
+            )
+        );
+
+
+    if (!groups.length) {
+
+      container.innerHTML = `
+
+        <div class="standings-card">
+
+          <div class="empty-state">
+
+            <strong>
+              Todavía no hay grupos de pádel
+            </strong>
+
+          </div>
+
+        </div>
+
+      `;
+
+      return;
+
+    }
+
+
+    container.innerHTML =
+      groups
+
+        .map(
+          group => {
+
+            const table =
+              standings[group];
+
+
+            return `
+
+              <div class="standings-card">
+
+                <h3 class="standings-group-title">
+                  ${group}
+                </h3>
+
+
+                <div class="table-scroll">
+
+                  <table>
+
+                    <thead>
+
+                      <tr>
+
+                        <th>#</th>
+
+                        <th>
+                          Jugador / Pareja
+                        </th>
+
+                        <th>PJ</th>
+                        <th>PG</th>
+                        <th>PP</th>
+                        <th>PTS</th>
+
+                      </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                      ${table
+
+                        .map(
+                          (
+                            team,
+                            index
+                          ) => `
+
+                            <tr class="${
+                              index < 2
+                                ? "qualified-row"
+                                : ""
+                            }">
+
+                              <td>
+                                ${index + 1}
+                              </td>
+
+                              <td>
+                                <strong>
+                                  ${team.name}
+                                </strong>
+                              </td>
+
+                              <td>
+                                ${team.pj}
+                              </td>
+
+                              <td>
+                                ${team.pg}
+                              </td>
+
+                              <td>
+                                ${team.pp}
+                              </td>
+
+                              <td>
+                                <strong>
+                                  ${team.pts}
+                                </strong>
+                              </td>
+
+                            </tr>
+
+                          `
+                        )
+                        .join("")}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </div>
+
+            `;
+
+          }
+        )
+
+        .join("");
+
+  };
