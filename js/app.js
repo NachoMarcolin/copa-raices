@@ -6819,3 +6819,641 @@ renderStandings =
         .join("");
 
   };
+
+  // ======================================================
+// FIXTURE PÚBLICO DE PÁDEL
+// GRUPOS → CUARTOS → SEMIFINALES → FINAL
+// ======================================================
+
+
+// Guardamos el fixture actual para no tocar fútbol
+const renderFixtureBeforePadelBracket =
+  renderFixture;
+
+
+renderFixture =
+  function () {
+
+    if (
+      currentSport !== "padel"
+    ) {
+
+      renderFixtureBeforePadelBracket();
+
+      return;
+
+    }
+
+
+    renderPadelFixture();
+
+  };
+
+
+// ======================================================
+// TARJETA DE PLAYOFF DE PÁDEL
+// ======================================================
+
+function padelPlayoffCardHTML(
+  match,
+  fallbackLabel
+) {
+
+  if (!match) {
+
+    return `
+
+      <article class="
+        playoff-match-card
+        padel-playoff-placeholder
+      ">
+
+        <div class="
+          playoff-match-top
+        ">
+
+          <span>
+            ${fallbackLabel}
+          </span>
+
+        </div>
+
+
+        <div class="
+          playoff-team-row
+        ">
+
+          <span>
+            A definir
+          </span>
+
+        </div>
+
+
+        <div class="
+          playoff-team-row
+        ">
+
+          <span>
+            A definir
+          </span>
+
+        </div>
+
+      </article>
+
+    `;
+
+  }
+
+
+  const homeName =
+    teamName(
+      match.home_team
+    );
+
+
+  const awayName =
+    teamName(
+      match.away_team
+    );
+
+
+  const homeGames =
+    Number(
+      match.padel_home_games ??
+      match.home_score ??
+      0
+    );
+
+
+  const awayGames =
+    Number(
+      match.padel_away_games ??
+      match.away_score ??
+      0
+    );
+
+
+  let statusText = "";
+
+
+  if (
+    match.status === "live"
+  ) {
+
+    statusText = `
+      <strong class="playoff-live">
+        EN VIVO
+      </strong>
+    `;
+
+  }
+
+
+  else if (
+    match.status === "finished"
+  ) {
+
+    statusText = `
+      <strong>
+        FINAL
+      </strong>
+    `;
+
+  }
+
+
+  return `
+
+    <article class="
+      playoff-match-card
+      ${
+        match.status === "finished"
+          ? "finished"
+          : ""
+      }
+    ">
+
+
+      <div class="
+        playoff-match-top
+      ">
+
+        <span>
+          ${match.round_name || fallbackLabel}
+        </span>
+
+        ${statusText}
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${homeName}
+        </span>
+
+
+        ${
+          match.status !== "pending"
+
+            ? `
+              <strong>
+                ${homeGames}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-team-row
+      ">
+
+        <span>
+          ${awayName}
+        </span>
+
+
+        ${
+          match.status !== "pending"
+
+            ? `
+              <strong>
+                ${awayGames}
+              </strong>
+            `
+
+            : ""
+        }
+
+      </div>
+
+
+      <div class="
+        playoff-match-meta
+      ">
+
+        ${
+          match.start_time
+            ? normalizeTime(
+                match.start_time
+              )
+            : ""
+        }
+
+        ${
+          match.start_time &&
+          match.court
+            ? " · "
+            : ""
+        }
+
+        ${
+          match.court
+            ? `Cancha ${match.court}`
+            : ""
+        }
+
+      </div>
+
+    </article>
+
+  `;
+
+}
+
+
+// ======================================================
+// BUSCAR PARTIDO POR RONDA
+// ======================================================
+
+function findPublicPadelRound(
+  roundName
+) {
+
+  return matches.find(
+    match =>
+      match.sport === "padel"
+      &&
+      String(
+        match.round_name || ""
+      )
+      .trim()
+      .toLowerCase() ===
+      roundName.toLowerCase()
+  ) || null;
+
+}
+
+
+// ======================================================
+// ORDEN DE PARTIDOS DE GRUPO
+// ======================================================
+
+function sortedPadelGroupMatches() {
+
+  return padelGroupMatches()
+
+    .slice()
+
+    .sort(
+      (a, b) => {
+
+        const timeComparison =
+          String(
+            a.start_time || ""
+          )
+          .localeCompare(
+            String(
+              b.start_time || ""
+            )
+          );
+
+
+        if (
+          timeComparison !== 0
+        ) {
+
+          return timeComparison;
+
+        }
+
+
+        return String(
+          a.court || ""
+        )
+        .localeCompare(
+          String(
+            b.court || ""
+          )
+        );
+
+      }
+    );
+
+}
+
+
+// ======================================================
+// RENDER FIXTURE PÁDEL
+// ======================================================
+
+function renderPadelFixture() {
+
+  const container =
+    document.getElementById(
+      "fixtureContent"
+    );
+
+
+  if (!container) {
+    return;
+  }
+
+
+  const groupMatches =
+    sortedPadelGroupMatches();
+
+
+  const qf1 =
+    findPublicPadelRound(
+      "Cuartos 1"
+    );
+
+
+  const qf2 =
+    findPublicPadelRound(
+      "Cuartos 2"
+    );
+
+
+  const qf3 =
+    findPublicPadelRound(
+      "Cuartos 3"
+    );
+
+
+  const qf4 =
+    findPublicPadelRound(
+      "Cuartos 4"
+    );
+
+
+  const sf1 =
+    findPublicPadelRound(
+      "Semifinal 1"
+    );
+
+
+  const sf2 =
+    findPublicPadelRound(
+      "Semifinal 2"
+    );
+
+
+  const finalMatch =
+    findPublicPadelRound(
+      "Final"
+    );
+
+
+  container.innerHTML = `
+
+
+    <!-- ===============================================
+         FASE DE GRUPOS
+    ================================================ -->
+
+    <section class="
+      fixture-stage
+    ">
+
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          FASE DE GRUPOS
+        </span>
+
+      </div>
+
+
+      <div class="
+        fixture-stage-list
+      ">
+
+        ${
+          groupMatches.length
+
+            ? groupMatches
+                .map(
+                  match =>
+                    fixtureMatchRowHTML(
+                      match
+                    )
+                )
+                .join("")
+
+            : `
+
+              <div class="empty-state">
+
+                <strong>
+                  No hay partidos de grupos cargados
+                </strong>
+
+              </div>
+
+            `
+        }
+
+      </div>
+
+
+    </section>
+
+
+
+    <!-- ===============================================
+         CUARTOS DE FINAL
+    ================================================ -->
+
+    <section class="
+      fixture-stage
+      playoff-stage
+    ">
+
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          CUARTOS DE FINAL
+        </span>
+
+      </div>
+
+
+      <div class="
+        padel-bracket-info
+      ">
+
+        <span>
+          1° A vs 2° D
+        </span>
+
+        <span>
+          1° B vs 2° C
+        </span>
+
+        <span>
+          1° C vs 2° B
+        </span>
+
+        <span>
+          2° A vs 1° D
+        </span>
+
+      </div>
+
+
+      <div class="
+        playoff-grid
+        padel-quarterfinal-grid
+      ">
+
+        ${padelPlayoffCardHTML(
+          qf1,
+          "Cuartos 1"
+        )}
+
+
+        ${padelPlayoffCardHTML(
+          qf2,
+          "Cuartos 2"
+        )}
+
+
+        ${padelPlayoffCardHTML(
+          qf3,
+          "Cuartos 3"
+        )}
+
+
+        ${padelPlayoffCardHTML(
+          qf4,
+          "Cuartos 4"
+        )}
+
+      </div>
+
+
+    </section>
+
+
+
+    <div class="
+      playoff-connector
+    ">
+      ↓
+    </div>
+
+
+
+    <!-- ===============================================
+         SEMIFINALES
+    ================================================ -->
+
+    <section class="
+      fixture-stage
+      playoff-stage
+    ">
+
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          SEMIFINALES
+        </span>
+
+      </div>
+
+
+      <div class="
+        padel-bracket-info
+      ">
+
+        <span>
+          Ganador QF1 vs Ganador QF2
+        </span>
+
+        <span>
+          Ganador QF3 vs Ganador QF4
+        </span>
+
+      </div>
+
+
+      <div class="
+        playoff-grid
+      ">
+
+        ${padelPlayoffCardHTML(
+          sf1,
+          "Semifinal 1"
+        )}
+
+
+        ${padelPlayoffCardHTML(
+          sf2,
+          "Semifinal 2"
+        )}
+
+      </div>
+
+
+    </section>
+
+
+
+    <div class="
+      playoff-connector
+    ">
+      ↓
+    </div>
+
+
+
+    <!-- ===============================================
+         FINAL
+    ================================================ -->
+
+    <section class="
+      fixture-stage
+      playoff-stage
+      final-round
+    ">
+
+
+      <div class="
+        fixture-stage-heading
+      ">
+
+        <span>
+          FINAL
+        </span>
+
+      </div>
+
+
+      <div class="
+        playoff-grid
+        final-grid
+      ">
+
+        ${padelPlayoffCardHTML(
+          finalMatch,
+          "Final"
+        )}
+
+      </div>
+
+
+    </section>
+
+  `;
+
+}

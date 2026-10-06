@@ -3755,3 +3755,65 @@ th:nth-child(2) {
   }
 
 }
+
+/* =====================================================
+   FIXTURE PÚBLICO - PLAYOFFS PÁDEL
+===================================================== */
+
+.padel-bracket-info {
+  display: grid;
+  grid-template-columns: 1fr;
+
+  gap: 6px;
+
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: #f7fafc;
+
+  color: var(--text-soft);
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+
+.padel-bracket-info span {
+  display: flex;
+  align-items: center;
+
+  min-height: 24px;
+}
+
+
+.padel-playoff-placeholder {
+  opacity: .72;
+}
+
+
+.padel-playoff-placeholder
+.playoff-team-row {
+  color: var(--text-soft);
+}
+
+
+@media (min-width: 700px) {
+
+  .padel-bracket-info {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+
+@media (min-width: 1100px) {
+
+  .padel-quarterfinal-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
